@@ -100,11 +100,18 @@ Three lanes run at once, one per part of the pipeline. Each lane owns its
 files and edits nothing else. The main session owns everything else:
 `contracts/`, `PROBLEM.md`, `README.md`, `requirements.txt`, `.gitignore`.
 
+A skeleton that fits any PS exists since 2026-10-31: `analyze.py`, `app.py`,
+`static/index.html` and `contracts/` work end to end on `contracts/sample`
+(read `ARCHITECTURE.md`). The analysis and ui lanes adapt these files at
+their `PS:` lines and add what the PS needs; they never start over or copy
+the mock's versions. Why: the skeleton was tested on four data shapes and a
+real DeepSeek run.
+
 | Lane | Owns | Builds against | Done when |
 |---|---|---|---|
 | data | `generate.py`, `data/sessions/` | `data/raw/` and the columns in `contracts/README.md` | `python3 contracts/check.py data/sessions/<case>` passes for every case, and it prints a table showing the planted signals |
 | analysis | `analyze.py` and the `report.md` files it writes | `contracts/sample/` | `python3 analyze.py contracts/sample` writes `report.md` naming the sample's planted incident, and `python3 contracts/check.py --timeline contracts/sample` passes |
-| ui | `app.py`, `static/index.html` | `contracts/timeline.json`, `contracts/report_sample.md` | `uvicorn app:app` serves the page from the samples, and the headless screenshot shows the chart and the report |
+| ui | `app.py`, `static/index.html` | `contracts/timeline.json`, `contracts/sample/report.md` | `uvicorn app:app` serves the page from the samples, and the headless screenshot shows the chart and the report |
 
 ### Contracts (0:15–0:30, main session)
 
@@ -117,9 +124,10 @@ Before any lane starts, write and commit `contracts/`:
 - `sample/`: one hand-written case folder in the contract's format, about
   30 minutes of rows per CSV with one planted incident, so the analysis lane
   can test its detection before the real data exists.
-- `timeline.json` and `report_sample.md`: hand-written examples of what
-  `/api/timeline` and `/api/report` return, so the UI lane can draw the page
-  before `analyze.py` exists.
+- `timeline.json`: a hand-written example of what `/api/timeline` returns.
+  Its shape is generic, so it should not need to change. `sample/report.md`,
+  a real report on the sample, shows what `/api/report` returns; rerun
+  `python3 analyze.py contracts/sample` after replacing the sample.
 - `check.py` is already in the bootstrap and was tested on 2026-10-30. It
   takes a case folder and fails unless every CSV in `contracts/sample/` is
   there with exactly the same columns, in order. With `--timeline`, it also
@@ -150,9 +158,10 @@ only when you must, and then tell every running lane with SendMessage.
   A lane never runs git; the main session commits for it. Why: two agents
   running git at once collide on `.git/index.lock`, and a lane's commit
   could sweep in another lane's half-written file.
-- The UI lane reads the samples through two small functions in `app.py`,
-  one for the timeline and one for the report, so integration changes only
-  those two function bodies.
+- `app.py` already serves every case through `analyze.py`, with
+  `contracts/sample` listed as the case `sample`. If `analyze.py` is mid-edit
+  and the import fails, the UI lane waits and retries; it never edits
+  `analyze.py`.
 - Its final report lists the files it changed, how to run them, the output
   of its done-when check, at most 5 bullets per file explaining it, and
   every assumption it made that the contract did not settle.
@@ -256,8 +265,9 @@ something, say so."
 - Check the page by looking at it: take a headless screenshot and Read the
   PNG. A 200 status does not show that the chart drew.
   `~/.cache/ms-playwright/chromium-1248/chrome-linux64/chrome --headless=new --no-sandbox --window-size=1200,1400 --virtual-time-budget=5000 --screenshot=page.png http://127.0.0.1:8000/`
-- The mock's `app.py` and `static/index.html` are a working starting point:
-  copy them, then change the series and labels.
+- `app.py` and `static/index.html` already exist and draw any timeline (see
+  `ARCHITECTURE.md`): change the title and labels, and do not copy the
+  mock's versions.
 
 ## Demo and judges
 
@@ -284,3 +294,5 @@ Done on 2026-10-30 in `/home/ade/Code/bootstrap`:
 - [x] `contracts/check.py`, tested on passing and failing fake cases
 - [x] `data/raw/`, empty, for the PS data
 - [x] The mock repo has a working `app.py` and `static/index.html` (2026-10-29)
+- [x] The PS-agnostic skeleton (`analyze.py`, `app.py`, `static/index.html`,
+      `contracts/`), tested on four data shapes, and `ARCHITECTURE.md` (2026-10-31)
