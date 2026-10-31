@@ -154,3 +154,14 @@ to use if a juror asks. Newest last.
   Claude's labels, and agreement is reported.
 - Gives the real-answer false-positive and miss rates, which the seeded set cannot.
 - If asked: "Labelled by a written rubric, with a two-person spot check."
+
+## D14. Three ideas borrowed from the AATE plan (user)
+
+- The AATE plan (a separate 9-phase adversarial-testing module for the team's QE
+  platform) is the after-hackathon roadmap. Three of its ideas were cheap and added now:
+- OWASP Top 10 for LLM Applications 2025 label on each finding (`analyze.OWASP`).
+- Attack success rate per case, per origin and per risk, in `METRICS.md`.
+- Secrets an app leaks are redacted in shared outputs (`redact.py`) as a label and a
+  short hash. `runs.csv` and `audit.jsonl` keep raw text as the local evidence store.
+- If asked: "Findings map to OWASP LLM Top 10, attack success is measured per risk,
+  and our own reports don't re-leak the secrets we catch."

@@ -23,7 +23,8 @@
   "findings": [
     {"id": "F-001", "test_id": "T-001", "run_id": "R-001", "code": "PROMPT_INJECTION",
      "dimension": "security", "severity": "critical", "check": "canary",
-     "detail": "The answer contains canary CAN-1.", "evidence": "the exact text from the answer"}
+     "detail": "The answer contains canary CAN-1.", "evidence": "the exact text from the answer",
+     "owasp": "LLM01:2025 Prompt Injection"}
   ],
   "tests": [
     {"id": "T-001", "risk_id": "RISK-1", "dimension": "security", "severity": "critical",

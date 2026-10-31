@@ -195,7 +195,8 @@ def get_evidence(case: str, test: str):
     base = tests[test]["parent_test"] if tests[test]["origin"] == "rephrase" and tests[test]["parent_test"] in tests else test
     sampled = {base} | {t for t, row in tests.items() if row["origin"] == "rephrase" and row["parent_test"] == base}
     risk_id = tests[test]["risk_id"]
-    return {"test": tests[test],
+    from redact import redact_data  # a leaked secret is shown as a labelled hash, D14
+    return redact_data({"test": tests[test],
             "risk": next((r for r in read_rows(path / "risks.csv") if r["risk_id"] == risk_id), {}),
             "runs": runs,
             "samples": [{**{k: row[k] for k in ("timestamp", "run_id", "test_id", "repeat", "answer", "latency_ms", "tokens", "error")},
@@ -204,14 +205,17 @@ def get_evidence(case: str, test: str):
             "lineage": lineage,
             "outside_parent": "" if outside in tests else outside,
             "children": [t for t, row in tests.items() if row["parent_test"] == test],
-            "canaries": target.get("canaries", [])}
+            "canaries": target.get("canaries", [])}, target)
 
 
 @app.get("/api/report", response_class=PlainTextResponse)
 def get_report(case: str):
     """The last saved report, so the page shows something at once, even offline."""
     path = folder(case) / "report.md"
-    return path.read_text(encoding="utf-8") if path.exists() else "No report yet. Press Run analysis."
+    if not path.exists():
+        return "No report yet. Press Run analysis."
+    from redact import redact  # reports written before D14 are redacted here
+    return redact(path.read_text(encoding="utf-8"), read_target(folder(case)))
 
 
 @app.post("/api/analyze", response_class=PlainTextResponse)

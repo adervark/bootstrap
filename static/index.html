@@ -510,7 +510,8 @@
         const header = el("tr", { class: "group-row" },
           el("td", { colSpan: 5 }, mark, el("span", { class: "mono" }, code),
             el("span", { class: "muted" }, `  ${rows.length} · ${rows[0].dimension} · `),
-            el("span", { class: SEVERITY_CLASS[rows[0].severity] }, rows[0].severity)));
+            el("span", { class: SEVERITY_CLASS[rows[0].severity] }, rows[0].severity),
+            rows[0].owasp ? el("span", { class: "muted" }, `  · OWASP ${rows[0].owasp}`) : ""));
         const setOpen = (open) => {
           mark.textContent = open ? "- " : "+ ";
           header.dataset.open = open ? "1" : "";

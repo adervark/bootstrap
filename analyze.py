@@ -26,6 +26,7 @@ from pathlib import Path
 
 import audit
 import llm
+from redact import redact, redact_data
 
 csv.field_size_limit(10_000_000)  # a run's sources column holds whole documents
 
@@ -48,6 +49,20 @@ TAXONOMY = {  # code: (dimension, severity), from contracts/README.md
     "BIAS": ("safety", "high"),
     "TARGET_ERROR": ("accuracy", "low"),
     "LOW_AGREEMENT": ("accuracy", "medium"),  # D8: probabilistic, so never critical and never V1
+}
+# OWASP Top 10 for LLM Applications 2025 (adopted from the AATE plan, DECISIONS.md D14). Quality codes with
+# no Top 10 category map to "". Campus injections arrive through retrieved documents, which OWASP also
+# covers under LLM08:2025 Vector and Embedding Weaknesses; each code keeps one primary category.
+OWASP = {
+    "PROMPT_INJECTION": "LLM01:2025 Prompt Injection",
+    "UNSAFE_CONTENT": "LLM01:2025 Prompt Injection",  # a jailbreak that made the app comply
+    "DATA_LEAK": "LLM02:2025 Sensitive Information Disclosure",
+    "PII_LEAK": "LLM02:2025 Sensitive Information Disclosure",
+    "HALLUCINATION": "LLM09:2025 Misinformation",
+    "UNSUPPORTED_CLAIM": "LLM09:2025 Misinformation",
+    "WRONG_ANSWER": "LLM09:2025 Misinformation",
+    "BAD_CITATION": "LLM09:2025 Misinformation",
+    "LOW_AGREEMENT": "LLM09:2025 Misinformation",
 }
 FACTUAL_DIMENSIONS = ("accuracy", "grounding", "completeness")  # the tests the no-KB check samples
 MAX_LLM = 6  # LLM calls at once
@@ -228,6 +243,10 @@ def ask_json(system, user, temperature=0.0):
         _health["ok"] += 1
         _health["streak"] = 0
     return reply
+
+
+def load_target(case_dir):
+    return json.loads(Path(case_dir, "target.json").read_text(encoding="utf-8"))
 
 
 def wrap(text):
@@ -1257,9 +1276,12 @@ def run(case_dir):
              "explanation_by_llm": by_llm, "statements_dropped": dropped,
              "bias_pairs": result.pop("bias_pairs"), "outside_kb_sources": result.pop("outside_kb_sources"), "agreement": result.pop("agreement"),
              "stance_notes": result.pop("stance_notes")}
+    for item in result["findings"]:
+        item["owasp"] = OWASP.get(item["code"], "")
     ordered = {key: result[key] for key in ("case", "target", "scorecard", "decision", "findings", "tests", "regression")}
-    Path(case_dir, "results.json").write_text(json.dumps({**ordered, "analysis": notes}, indent=1), encoding="utf-8")
-    report = build_report(ordered, notes, why, by_llm, dropped)
+    target = load_target(case_dir)
+    Path(case_dir, "results.json").write_text(json.dumps(redact_data({**ordered, "analysis": notes}, target), indent=1), encoding="utf-8")
+    report = redact(build_report(ordered, notes, why, by_llm, dropped), target)
     Path(case_dir, "report.md").write_text(report, encoding="utf-8")
     audit.log(case_dir, "analyze.py", "report_written", llm_calls=card["cost"]["llm_calls"], tokens=tokens, cost_usd=card["cost"]["cost_usd"],
               llm_available=notes["llm_available"])
@@ -1273,7 +1295,9 @@ def timeline(case_dir):
     if path.exists():
         saved = json.loads(path.read_text(encoding="utf-8"))
         saved.pop("analysis", None)
-        return saved
+        for item in saved["findings"]:
+            item["owasp"] = OWASP.get(item["code"], "")
+        return redact_data(saved, load_target(case_dir))
     result = evaluate(case_dir, judge=False)
     result.pop("bias_pairs")
     result.pop("outside_kb_sources")
@@ -1281,7 +1305,9 @@ def timeline(case_dir):
     result.pop("stance_notes")
     result["decision"] = {"llm_verdict": "", "final_verdict": "", "votes": [], "vetoes": [], "rationale": "", "evidence": [],
                           "conditions": [], "status": "", "human": {"name": "", "reason": "", "action": "", "time": ""}}
-    return result
+    for item in result["findings"]:
+        item["owasp"] = OWASP.get(item["code"], "")
+    return redact_data(result, load_target(case_dir))
 
 
 def approve(case_dir, name, reason, action):
