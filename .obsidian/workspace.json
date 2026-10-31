@@ -13,12 +13,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "CLAUDE.md",
-                "mode": "source",
+                "file": "data/raw/targets/RAG_Poisoning_POC/README.md",
+                "mode": "preview",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "CLAUDE"
+              "title": "README"
             }
           }
         ]
@@ -99,7 +99,7 @@
             "state": {
               "type": "backlink",
               "state": {
-                "file": "CLAUDE.md",
+                "file": "data/raw/targets/RAG_Poisoning_POC/README.md",
                 "collapseAll": false,
                 "extraContext": false,
                 "sortOrder": "alphabetical",
@@ -118,7 +118,7 @@
             "state": {
               "type": "outgoing-link",
               "state": {
-                "file": "CLAUDE.md",
+                "file": "data/raw/targets/RAG_Poisoning_POC/README.md",
                 "linksCollapsed": false,
                 "unlinkedCollapsed": true
               },
@@ -161,7 +161,7 @@
             "state": {
               "type": "outline",
               "state": {
-                "file": "CLAUDE.md",
+                "file": "data/raw/targets/RAG_Poisoning_POC/README.md",
                 "followCursor": false,
                 "showSearch": false,
                 "searchQuery": ""
@@ -190,7 +190,22 @@
   },
   "active": "938f004e0cd5ae5d",
   "lastOpenFiles": [
-    "deck/jury_dryrun.json",
+    "data/labels/blind.md",
+    "contracts/ADVERSARIAL.md",
+    "ARCHITECTURE.md",
+    "CLAUDE.md",
+    "static/sedAs0La2",
+    "data/sessions/demo_copy/check_cache.json",
+    "data/sessions/demo_copy/report.md",
+    "data/sessions/demo_copy/tests.csv",
+    "data/sessions/demo_copy/target.json",
+    "data/sessions/demo_copy/runs.csv",
+    "data/sessions/demo_copy/risks.csv",
+    "data/sessions/demo_copy/results.json",
+    "data/sessions/demo_copy/audit.jsonl",
+    "data/sessions/demo_copy/answer.txt",
+    "data/sessions/demo_copy",
+    "DEMO.md",
     "DECISIONS.md",
     "LABELS.md",
     "MONITORING.md",

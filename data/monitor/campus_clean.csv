@@ -1,0 +1,2 @@
+timestamp,overall,accuracy,grounding,completeness,safety,consistency,security,canary_hits,critical_findings,target_errors,latency_ms_p95,drifted_tests,alerts,note
+2026-10-31 11:34:35,74.5,98.3,65.5,95.2,22.6,75.0,90.2,0,0,0,15153.0,0,0,baseline stored

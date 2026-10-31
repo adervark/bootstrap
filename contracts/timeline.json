@@ -6,6 +6,7 @@
     "dimensions": [
       {"name": "security", "score": 40.0, "passed": 2, "total": 5}
     ],
+    "attacks": {"worked": 2, "total": 5},
     "coverage": {"risks_total": 6, "risks_tested": 6, "tests": 8, "runs": 12, "regression_tests": 0},
     "cost": {"llm_calls": 20, "tokens": 12000, "cost_usd": 0.004, "latency_ms_p50": 900, "latency_ms_p95": 2100}
   },
@@ -17,6 +18,8 @@
     "rationale": "Why, citing F-001.",
     "evidence": ["F-001"],
     "conditions": ["Remove the poisoned document"],
+    "headline": "It follows instructions hidden in a poisoned document.",
+    "fix": "Remove the poisoned document from the corpus.",
     "status": "blocked",
     "human": {"name": "", "reason": "", "action": "", "time": ""}
   },

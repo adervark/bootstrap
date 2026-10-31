@@ -242,6 +242,7 @@ def watch(job, path):
                 job["step"], job["detail"] = "generating tests", "Risk added; writing tests for it."
             elif job["step"] == "executing":
                 import audit
+                fill_answers(job, path)
                 captured = sum(row["test_id"] in job["tests"] for row in read_rows(path / "runs.csv"))
                 # execute.py decides the repeats per test and logs the total it will run.
                 planned = [entry["details"].get("to_run") for entry in audit.read(path)[job["_audit"]:]
@@ -260,6 +261,32 @@ def watch(job, path):
     job["elapsed_s"] = round(time.time() - job["_start"])
 
 
+def fill_answers(job, path):
+    """The live feed: each new test's answers so far, with any leaked secret redacted."""
+    import analyze
+    from redact import redact
+    target = analyze.load_target(path)
+    answers = {}
+    for row in read_rows(path / "runs.csv"):
+        if row["test_id"] in job["tests"]:
+            answers.setdefault(row["test_id"], []).append(redact((row["answer"] or row["error"])[:300], target))
+    for item in job["feed"]:
+        item["answers"] = answers.get(item["test_id"], [])
+
+
+def fill_results(job, path):
+    """The live feed's last step: each new test's call, read from the fresh results."""
+    result = json.loads((path / "results.json").read_text(encoding="utf-8"))
+    found = {f["id"]: f for f in result["findings"]}
+    tests = {t["id"]: t for t in result["tests"]}
+    rank = {"critical": 0, "high": 1, "medium": 2, "low": 3}
+    for item in job["feed"]:
+        test = tests.get(item["test_id"], {})
+        mine = sorted((found[i] for i in test.get("findings", []) if i in found), key=lambda f: rank.get(f["severity"], 4))
+        item["result"] = {"passed": bool(test.get("passed")), "codes": list(dict.fromkeys(f["code"] for f in mine)),
+                          "detail": mine[0]["detail"][:240] if mine else ""}
+
+
 def run_scenario(job, case, path, text):
     """The jury's text through the whole pipeline. Any failure ends the job as
     "failed" at the step it happened in, with the reason, and never silently."""
@@ -276,6 +303,8 @@ def run_scenario(job, case, path, text):
         job["tests"] = generate.add_scenario(path, text)
         if not job["tests"]:
             raise RuntimeError("the generator returned no tests for this scenario")
+        prompts = {row["test_id"]: row["prompt"] for row in read_rows(path / "tests.csv")}
+        job["feed"] = [{"test_id": test, "prompt": prompts.get(test, ""), "answers": [], "result": None} for test in job["tests"]]
         job["step"], job["detail"] = "executing", f"Running {len(job['tests'])} new tests."
         added = execute.run_tests(path, job["tests"])
         new = [row for row in read_rows(path / "runs.csv") if row["test_id"] in job["tests"]]
@@ -284,8 +313,10 @@ def run_scenario(job, case, path, text):
         failed = [row for row in new if row["error"]]
         if len(failed) == len(new):
             raise RuntimeError(f"every call to the target failed. First error: {failed[0]['error']}")
+        fill_answers(job, path)
         job["step"], job["detail"] = "verifying", f"Checking {len(new)} answers."
         analyze.run(path)
+        fill_results(job, path)
         job["step"], job["detail"] = "deciding", f"{len(job['tests'])} new tests, {len(new)} answers."
         job["state"] = "done"
     except Exception as error:
@@ -308,7 +339,7 @@ def start_scenario(case: str, body: Scenario):
     job_id = uuid.uuid4().hex[:12]
     claim(case, f"job {job_id}")
     job = {"state": "running", "step": STEPS[0], "detail": "Reading the scenario.", "steps": STEPS,
-           "case": case, "tests": [], "elapsed_s": 0, "_start": time.time()}
+           "case": case, "tests": [], "feed": [], "elapsed_s": 0, "_start": time.time()}
     JOBS[job_id] = job
     threading.Thread(target=run_scenario, args=(job, case, path, text), daemon=True).start()
     return {"job": job_id}
@@ -353,6 +384,25 @@ def get_audit(case: str):
         return {"valid": valid, "entries": audit.read(path), "broken_at": None if valid else where}
     except Exception as error:
         return {"valid": False, "entries": [], "broken_at": None, "error": clean(error)}
+
+
+def load_json(path):
+    path = Path(path)
+    return json.loads(path.read_text(encoding="utf-8")) if path.exists() else {}
+
+
+@app.get("/api/metrics")
+def get_metrics():
+    """The success measures: data/metrics.json, written by metrics.py, and the timed jury dry run."""
+    return load_json("data/metrics.json") | {"jury_dryrun": load_json("deck/jury_dryrun.json")}
+
+
+@app.get("/api/monitor")
+def get_monitor(case: str):
+    """The case's monitoring baseline and its latest check, written by monitor.py."""
+    name = folder(case).name
+    rows = read_rows(Path("data/monitor", f"{name}.csv")) if Path("data/monitor", f"{name}.csv").exists() else []
+    return {"baseline": load_json(Path("data/monitor", f"{name}.baseline.json")), "last": rows[-1] if rows else {}}
 
 
 @app.get("/api/calibration")

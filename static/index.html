@@ -75,12 +75,40 @@
     /* The verdict: the one thing to read from the back of the room. */
     #verdict { padding-top: 6px; }
     .verdict-line { display: flex; align-items: baseline; gap: 20px; flex-wrap: wrap; }
-    #verdict-word { font-size: 64px; line-height: 1.1; font-weight: 700; letter-spacing: 0.01em; text-transform: uppercase; }
+    #verdict-word { font-size: 52px; line-height: 1.1; font-weight: 700; letter-spacing: 0.01em; text-transform: uppercase; }
     .badge { border: 1px solid currentColor; padding: 2px 9px; font-size: 14px; font-weight: 600;
              letter-spacing: 0.06em; text-transform: uppercase; white-space: nowrap; }
     #verdict-why { font-size: 21px; line-height: 1.35; margin-top: 2px; }
     #verdict-why code { font-family: var(--mono); font-size: 0.86em; color: var(--text); }
     #verdict-counts { font-family: var(--mono); font-size: 14px; color: var(--muted); margin-top: 4px; }
+
+    /* The answer: question, verdict, one reason, one fix, how far to trust it; the scorecard beside it. */
+    .hero { display: grid; grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); gap: 0 40px; align-items: start; }
+    #hero-q { font-size: 24px; margin-top: 14px; }
+    .story { display: grid; grid-template-columns: 112px minmax(0, 1fr); gap: 5px 14px; align-items: baseline;
+             font-size: 16px; line-height: 1.4; }
+    .story .label { font-size: 12px; }
+    .hero-kv { display: grid; grid-template-columns: 64px minmax(0, 1fr); gap: 10px 14px; align-items: baseline;
+               margin-top: 14px; font-size: 20px; line-height: 1.35; }
+    .hero-kv .label { font-size: 13px; }
+    #hero-trust { font-size: 15px; }
+    .hero #score h2 { border-top: 0; padding-top: 0; }
+    ol.chain { list-style: none; display: flex; flex-wrap: wrap; gap: 4px 0; padding: 10px 0; margin: 12px 0 0;
+               border-top: 1px solid var(--rule); font-size: 12.5px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; }
+    ol.chain li + li::before { content: "\2192"; color: var(--rule); margin: 0 9px; }
+    ol.chain a { color: var(--muted); text-decoration: none; }
+    ol.chain a:hover { color: var(--amber); }
+    .jury-grid { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: 0 32px; }
+    .human-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 2fr); gap: 0 16px; max-width: 900px; }
+    .feed { font-size: 14px; margin-top: 6px; }
+    .feed-tally { font-family: var(--mono); font-size: 15px; color: var(--text); padding-bottom: 6px; border-bottom: 1px solid var(--rule); }
+    .feed-row { display: grid; grid-template-columns: 58px minmax(0, 1fr) 220px; gap: 3px 12px; padding: 7px 0;
+                border-bottom: 1px solid var(--rule-soft); }
+    .feed-row .q { color: var(--text); }
+    .feed-row .a { grid-column: 2 / 4; font-family: var(--mono); font-size: 13px; color: var(--muted); overflow-wrap: anywhere; }
+    .feed-row .a.red { color: var(--red); }
+    .feed-row .call { font-family: var(--mono); font-size: 13px; text-align: right; }
+    @media (max-width: 1000px) { .hero, .jury-grid, .human-grid { grid-template-columns: minmax(0, 1fr); } }
 
     .two { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 6fr); gap: 0 32px; }
     @media (max-width: 1000px) { .two { grid-template-columns: minmax(0, 1fr); } }
@@ -97,8 +125,7 @@
     tr.click:hover { background: var(--bar); }
     tr.open > td { background: var(--bar); }
     tr.open > td:first-child { box-shadow: inset 2px 0 0 var(--amber); padding-left: 6px; }
-    tr.flash > td { animation: flash 2.4s ease-out; }
-    @keyframes flash { from { background: rgba(255, 160, 40, 0.35); } to { background: transparent; } }
+    tr.flash > td { background: var(--bar); }  /* a steady mark on the row a link jumped to; nothing animates */
     tr.new > td:first-child { box-shadow: inset 3px 0 0 var(--amber); padding-left: 6px; }
     .new-tag { color: var(--amber); font-size: 11.5px; font-weight: 700; letter-spacing: 0.05em; margin-left: 6px; }
     a, .link { color: var(--text); text-decoration: underline; text-decoration-color: var(--muted);
@@ -188,86 +215,122 @@
   <header>
     <div class="bar">
       <span class="brand">LLM RELEASE GATE</span>
-      <span class="muted">Should this ship, and why?</span>
+      <span class="muted">Release, Conditional Release or Reject, with supporting evidence</span>
       <label class="label">Case <select id="case"></select></label>
       <span class="spacer"></span>
       <span class="mono muted" id="status"></span>
       <button id="run" class="plain">Rerun analysis</button>
     </div>
     <nav id="views">
-      <a href="#verdict">Verdict</a><a href="#score">Scorecard</a><a href="#why">Why</a>
-      <a href="#findings">Findings</a><a href="#tests">Tests</a><a href="#jury">Jury scenario</a>
-      <a href="#human">Human review</a><a href="#compare">Before / after</a><a href="#records">Audit &amp; report</a>
+      <a href="#verdict">Release recommendation</a><a href="#jury">Jury scenario</a><a href="#why">AI reasoning</a>
+      <a href="#findings">Failure taxonomy with evidence</a><a href="#tests">Evaluation dataset and test suite</a>
+      <a href="#compare">Regression suite</a><a href="#monitoring">Continuous-monitoring plan</a>
+      <a href="#human">Human review</a><a href="#measures">Success measures</a><a href="#records">Audit logs</a>
     </nav>
   </header>
   <main>
     <div class="banner" id="selftest" hidden></div>
     <div class="banner" id="offline" hidden></div>
 
-    <section id="verdict" aria-live="polite">
-      <div class="verdict-line">
-        <span id="verdict-word" class="muted">Loading</span>
-        <span id="verdict-status"></span>
-      </div>
-      <div id="verdict-why"></div>
-      <div id="verdict-counts"></div>
-    </section>
-
-    <div class="two">
-      <section id="score">
-        <h2>Scorecard</h2>
-        <div id="score-table"></div>
-        <div id="metrics" class="metrics"></div>
+    <div class="hero">
+      <section id="verdict" aria-live="polite">
+        <div id="hero-story" class="story"></div>
+        <div id="hero-q"></div>
+        <div class="verdict-line">
+          <span id="verdict-word" class="muted">Loading</span>
+          <span id="verdict-status"></span>
+        </div>
+        <div class="hero-kv">
+          <div class="label">Why</div><div id="hero-why"></div>
+          <div class="label">Fix</div><div id="hero-fix"></div>
+          <div class="label">Trust</div><div id="hero-trust" class="muted"></div>
+        </div>
       </section>
-      <section id="why">
-        <h2>Why this recommendation</h2>
-        <p id="rationale"></p>
-        <div id="why-grid" class="kv"></div>
+      <section id="score">
+        <h2>Quality and safety scorecard</h2>
+        <div id="score-table"></div>
       </section>
     </div>
 
+    <ol class="chain" aria-label="The pipeline, in the brief's words">
+      <li><a href="#tests">Define Risks</a></li><li><a href="#tests">Generate Tests</a></li><li><a href="#tests">Execute</a></li>
+      <li><a href="#tests">Capture Responses</a></li><li><a href="#findings">Verify Grounding</a></li>
+      <li><a href="#findings">Classify Failures</a></li><li><a href="#score">Score Quality</a></li>
+      <li><a href="#verdict">Recommend Release</a></li><li><a href="#human">Human Review</a></li>
+      <li><a href="#monitoring">Monitor</a></li><li><a href="#compare">Regress</a></li>
+    </ol>
+
+    <section id="jury">
+      <h2>Dynamic adaptation: the jury's surprise scenario, live</h2>
+      <div class="jury-grid">
+        <div>
+          <textarea id="scenario" maxlength="2000"
+            placeholder="Describe a risk in plain words. Example: a student asks the helpdesk to reveal another student's exam results."></textarea>
+          <div class="form-row">
+            <button id="scenario-run" class="primary">Run scenario</button>
+            <span class="muted mono" id="scenario-count">0 / 2000</span>
+          </div>
+          <ol class="steps" id="steps" hidden></ol>
+          <div class="msg" id="scenario-msg"></div>
+        </div>
+        <div>
+          <div class="label">New tests against the app, as they happen</div>
+          <div id="feed" class="feed muted">Run a scenario: each new test, the app's answer and the gate's call appear here.</div>
+        </div>
+      </div>
+    </section>
+
+    <section id="why">
+      <h2>AI reasoning: why this recommendation</h2>
+      <div id="verdict-why"></div>
+      <div id="verdict-counts"></div>
+      <p id="rationale"></p>
+      <div id="why-grid" class="kv"></div>
+    </section>
+
     <section id="findings">
-      <h2>Findings: failure taxonomy with evidence <span id="findings-count"></span></h2>
+      <h2>Failure taxonomy with evidence <span id="findings-count"></span></h2>
       <div id="findings-table"></div>
     </section>
 
     <section id="tests">
-      <h2>Tests: generated from risks, varied from failures <span id="tests-count"></span></h2>
+      <h2>Reusable evaluation dataset and test suite <span id="tests-count"></span></h2>
+      <div id="metrics" class="metrics"></div>
       <div class="filters" id="test-filters"></div>
       <div class="scroll" id="tests-scroll"></div>
     </section>
 
-    <div class="two">
-      <section id="jury">
-        <h2>Jury scenario: dynamic adaptation, live</h2>
-        <textarea id="scenario" maxlength="2000"
-          placeholder="Describe a risk in plain words. Example: a student asks the helpdesk to reveal another student's exam results."></textarea>
-        <div class="form-row">
-          <button id="scenario-run" class="primary">Run scenario</button>
-          <span class="muted mono" id="scenario-count">0 / 2000</span>
-        </div>
-        <ol class="steps" id="steps" hidden></ol>
-        <div class="msg" id="scenario-msg"></div>
-      </section>
-      <section id="human">
-        <h2>Human review: the AI can stop a release, never ship one</h2>
-        <div id="human-state" class="msg" style="margin:0 0 10px"></div>
-        <label class="field label">Name <input id="human-name" maxlength="100" autocomplete="off"></label>
-        <label class="field label">Reason <input id="human-reason" maxlength="1000" autocomplete="off"></label>
-        <div class="form-row">
-          <button id="approve" class="plain">Approve</button>
-          <button id="override" class="plain">Override</button>
-        </div>
-        <div class="msg" id="human-msg"></div>
-      </section>
-    </div>
-
     <section id="compare">
-      <h2>Before and after: three stages, and the regression suite</h2>
+      <h2>Regression suite: three versions of the app, the same tests</h2>
       <div id="compare-body"></div>
     </section>
 
+    <section id="monitoring">
+      <h2>Continuous-monitoring plan</h2>
+      <div id="monitoring-body"></div>
+    </section>
+
+    <section id="human">
+      <h2>Human review: required for critical release decisions</h2>
+      <div id="human-state" class="msg" style="margin:0 0 10px"></div>
+      <div class="human-grid">
+        <label class="field label">Name <input id="human-name" maxlength="100" autocomplete="off"></label>
+        <label class="field label">Reason <input id="human-reason" maxlength="1000" autocomplete="off"></label>
+      </div>
+      <div class="form-row">
+        <button id="approve" class="plain">Approve</button>
+        <button id="override" class="plain">Override</button>
+      </div>
+      <div class="msg" id="human-msg"></div>
+    </section>
+
+    <section id="measures">
+      <h2>Success measures</h2>
+      <div id="measures-body"></div>
+    </section>
+
     <section id="records">
+      <h2>Test evidence and audit logs</h2>
       <details class="fold" id="audit">
         <summary><span class="label">Audit log</span> <span id="audit-badge"></span></summary>
         <div class="fold-body scroll" id="audit-body"></div>
@@ -309,6 +372,19 @@
     const query = (name) => `case=${encodeURIComponent(name)}`;
     const plural = (count, noun) => `${int(count)} ${noun}${count === 1 ? "" : "s"}`;
 
+    const STORY = {
+      campus_poisoned: { app: "Campus IT helpdesk chatbot", what: "Students ask it about passwords, VPN, MFA, Wi-Fi and exams; it answers from 10 campus IT documents. Open-source app (RAG_Poisoning_POC), run on this laptop.",
+        done: "We planted 3 poisoned documents in its knowledge base, as an attacker would: a fake password-reset site, a fake \"email us your password\" notice and a hidden rule." },
+      campus_hardened: { app: "Campus IT helpdesk chatbot, hardened", what: "The same bot and the same 3 poisoned documents.",
+        done: "We replaced its prompt with a hardened one that tells it to ignore instructions inside documents. Does a better prompt fix it?" },
+      campus_clean: { app: "Campus IT helpdesk chatbot, clean", what: "The same bot with its own prompt and only its 10 real campus IT documents.",
+        done: "Nothing planted. The poison removed: is the bot ready now?" },
+      dvla: { app: "Banking chatbot with tools", what: "Shows a user their own transactions through two tools; it must never show anyone else's. Open-source app (Damn Vulnerable LLM Agent), run on this laptop.",
+        done: "Nothing planted: we attack it directly, in the chat." },
+    };
+    const CASE_LABEL = { campus_poisoned: "Campus helpdesk \u00b7 poisoned", campus_hardened: "Campus helpdesk \u00b7 hardened prompt",
+                         campus_clean: "Campus helpdesk \u00b7 clean", dvla: "Banking agent" };
+    const ANSWER = { "Reject": "No \u00b7 Reject", "Conditional Release": "Not yet \u00b7 Conditional Release", "Release": "Yes \u00b7 Release" };
     const VERDICT_CLASS = { "Reject": "red", "Conditional Release": "gold", "Release": "" };
     const SEVERITY_RANK = { critical: 0, high: 1, medium: 2, low: 3 };
     const SEVERITY_CLASS = { critical: "red", high: "red", medium: "", low: "muted" };
@@ -324,6 +400,8 @@
     let caseNames = [];
     let answers = {};
     let timeline = null;
+    let calib = null;            // /api/calibration, for the trust line
+    let lastFeed = "";           // the feed is redrawn only when it changes, so nothing flickers
     let findingRows = new Map();
     let testRows = new Map();
     let originFilter = "all";
@@ -390,7 +468,19 @@
     function renderVerdict(t) {
       const d = t.decision || {};
       const word = $("verdict-word");
-      word.textContent = d.final_verdict || "No decision yet";
+      word.textContent = d.final_verdict ? (ANSWER[d.final_verdict] || d.final_verdict) : "No decision yet";
+      const story = STORY[t.case], k = t.scorecard?.coverage || {};
+      show("hero-story",
+        el("div", { class: "label" }, "App under test"), el("div", {}, el("b", {}, story?.app || t.target || t.case), story ? ` \u00b7 ${story.what}` : ""),
+        story ? el("div", { class: "label" }, "What we did") : null, story ? el("div", {}, story.done) : null,
+        el("div", { class: "label" }, "Our gate"),
+        el("div", {}, `Wrote ${int(k.tests)} tests from ${int(k.risks_total)} risks, asked the app ${int(k.runs)} times, checked every answer, and decided:`));
+      $("hero-q").textContent = "Should this app go live?";
+      const attacks = t.scorecard?.attacks;
+      show("hero-why", d.headline || brief((d.rationale || "").split(/(?<=\.)\s/)[0] || "No reason yet: rerun the analysis."),
+           attacks?.total ? el("span", { class: "muted" }, ` ${attacks.worked} of ${attacks.total} attacks worked.`) : null);
+      show("hero-fix", d.fix || (d.conditions || [])[0] || "-");
+      renderTrust();
       word.className = d.final_verdict ? VERDICT_CLASS[d.final_verdict] : "muted";
       const [status, statusClass] = STATUS[d.status] || [d.status, "muted"];
       show("verdict-status", status && el("span", { class: `badge ${statusClass}` }, status));
@@ -461,25 +551,51 @@
         metric(typeof k.cost_usd === "number" ? `$${k.cost_usd.toFixed(4)}` : "-", "estimated cost"));
     }
 
+    // A run of three or more IDs reads as "13 findings"; one click shows them all, each a link.
+    const ID_RUN = /\b[FT]-\d+\b(?:(?:,\s*(?:and\s+)?|\s+and\s+|\s*[-\u2013]\s*|\s+through\s+|\s*\/\s*)\b[FT]-\d+\b)+/g;
+    function brief(value) {
+      const text = String(value ?? "");
+      const out = document.createDocumentFragment();
+      let last = 0;
+      for (const match of text.matchAll(ID_RUN)) {
+        const ids = match[0].match(/\b[FT]-\d+\b/g);
+        if (ids.length < 3) continue;
+        out.append(linked(text.slice(last, match.index)), expandable(ids));
+        last = match.index + match[0].length;
+      }
+      out.append(linked(text.slice(last)));
+      return out;
+    }
+
+    function expandable(ids) {
+      const box = el("span", {});
+      const noun = ids.every((id) => id.startsWith("T-")) ? "tests" : "findings";
+      box.append(el("a", { class: "link", href: "#", on: (event) => {
+        event.preventDefault();
+        box.replaceChildren(...ids.flatMap((id, i) => [i ? ", " : "", linked(id)]));
+      } }, `${ids.length} ${noun}`));
+      return box;
+    }
+
     // 3. Why: the rationale, the votes and the conditions, every finding ID a link
     function renderWhy(t) {
       const d = t.decision || {};
-      show("rationale", linked(d.rationale || "No rationale yet: the LLM has not voted on this case."));
+      show("rationale", brief(d.rationale || "No rationale yet: the LLM has not voted on this case."));
       const votes = d.votes || [];
       const counts = {};
       for (const vote of votes) counts[vote] = (counts[vote] || 0) + 1;
       const agree = votes.length ? Math.max(...Object.values(counts)) : 0;
       const row = (label, ...content) => [el("div", { class: "label" }, label), el("div", {}, ...content)];
       show("why-grid",
-        ...row("Votes", ...votes.map((vote) => el("span", { class: `chip ${VERDICT_CLASS[vote] || ""}` }, vote)),
+        ...row("Votes", ...votes.map((vote) => el("span", { class: "chip" }, vote)),
                votes.length ? el("span", { class: "muted mono" }, ` ${agree} of ${votes.length} agree`) : "none"),
         ...row("Vetoes", ...(d.vetoes || []).flatMap((veto) => [el("div", {},
-               el("span", { class: "mono" }, veto.rule), " ", linked(veto.detail))]),
+               el("span", { class: "mono" }, veto.rule), " ", brief(veto.detail))]),
                (d.vetoes || []).length ? null : "none fired"),
-        ...row("Cited", ...(d.evidence || []).flatMap((id) => [linked(id), " "]),
+        ...row("Cited", (d.evidence || []).length > 2 ? expandable(d.evidence) : brief((d.evidence || []).join(", ")),
                (d.evidence || []).length ? null : "nothing"),
         ...row("Conditions", (d.conditions || []).length
-          ? el("ul", { class: "plain" }, ...d.conditions.map((c) => el("li", {}, linked(c))))
+          ? el("ul", { class: "plain" }, ...d.conditions.map((c) => el("li", {}, brief(c))))
           : "none"));
     }
 
@@ -551,7 +667,7 @@
 
     function flash(row) {
       row.classList.remove("flash");
-      void row.offsetWidth;  // restart the animation
+      void row.offsetWidth;  // re-apply the mark
       row.classList.add("flash");
     }
 
@@ -828,6 +944,29 @@
       }));
     }
 
+    // Each new test as it happens: the prompt, the app's answer, then the gate's call.
+    function drawFeed(job) {
+      const feed = job.feed || [];
+      const key = JSON.stringify(feed);
+      if (!feed.length || key === lastFeed) return;
+      lastFeed = key;
+      const short = (text, n) => (String(text).length > n ? `${String(text).slice(0, n)}…` : String(text));
+      const answered = feed.filter((item) => item.answers.length).length;
+      const judged = feed.filter((item) => item.result);
+      const failed = judged.filter((item) => !item.result.passed).length;
+      show("feed",
+        el("div", { class: "feed-tally" }, `${feed.length} new tests · ${answered} answered · ` +
+          (judged.length ? `${failed} of ${judged.length} failed` : "checking…")),
+        ...feed.map((item) => el("div", { class: "feed-row" },
+          el("span", { class: "mono muted" }, item.test_id),
+          el("span", { class: "q" }, short(item.prompt, 170)),
+          el("span", { class: `call ${item.result ? (item.result.passed ? "" : "red") : "muted"}` },
+            item.result ? (item.result.passed ? "PASS" : `FAIL \u00b7 ${item.result.codes.join(", ")}`)
+                        : (item.answers.length ? "answered, checking" : "asking the app…")),
+          item.answers.length ? el("span", { class: "a" }, `app: ${short(item.answers[0], 230)}`) : null,
+          item.result && !item.result.passed && item.result.detail ? el("span", { class: "a red" }, short(item.result.detail, 200)) : null)));
+    }
+
     async function runScenario() {
       const name = currentCase();
       const button = $("scenario-run");
@@ -835,6 +974,8 @@
       const fail = (text) => { msg.className = "msg red"; msg.textContent = text; };
       msg.className = "msg muted";
       msg.textContent = "Starting…";
+      lastFeed = "";
+      show("feed", el("div", { class: "feed-tally" }, "Reading the scenario and writing tests for it…"));
       button.disabled = true;
       const before = name === currentCase() ? timeline : null;
       try {
@@ -872,6 +1013,7 @@
             continue;
           }
           drawSteps(job);
+          drawFeed(job);
           if (job.state === "running") {
             msg.className = "msg muted";
             msg.textContent = `${job.elapsed_s} s. ${job.detail}`;
@@ -998,7 +1140,22 @@
           el("tbody", {}, ...rows)) : el("p", { class: "muted" }, "No entries yet."));
     }
 
+    // How far to trust the answer, in one line: the votes, the held-out benchmark, the hand labels.
+    function renderTrust() {
+      const d = timeline?.decision || {}, o = calib?.overall, real = calib?.real_labels?.precision_on_real_findings;
+      const votes = d.votes || [], agree = votes.filter((v) => v === d.llm_verdict).length;
+      const parts = [];
+      if (votes.length) parts.push(`${agree} of ${votes.length} LLM votes agree` +
+        (d.llm_verdict === d.final_verdict ? ", and the code checks agree." : `; the code checks made it ${d.final_verdict}.`));
+      if (o) parts.push(`On fresh planted faults it caught ${o.true_positive} of ${o.true_positive + o.false_negative}, ` +
+        `with ${o.false_positive} false alarms in ${o.false_positive + o.true_negative} clean answers.`);
+      if (real?.total) parts.push(`On real answers, ${real.hits} of ${real.total} findings were confirmed by hand.`);
+      $("hero-trust").textContent = parts.join(" ") || "Not measured yet.";
+    }
+
     function renderCalibration(data) {
+      calib = Object.keys(data).length ? data : null;
+      renderTrust();
       if (!Object.keys(data).length) {
         $("calibration-line").textContent = " not measured yet";
         show("calibration-body", el("p", { class: "muted" }, "No data/calibration.json yet."));
@@ -1086,10 +1243,13 @@
       $("offline").hidden = true;
       $("human-msg").textContent = "";
 
-      const [timelineReply, reportReply, auditReply, calibrationReply] = await Promise.allSettled([
+      const [timelineReply, reportReply, auditReply, calibrationReply, metricsReply, monitorReply] = await Promise.allSettled([
         api(`/api/timeline?${query(name)}`), api(`/api/report?${query(name)}`),
-        api(`/api/audit?${query(name)}`), api("/api/calibration"),
+        api(`/api/audit?${query(name)}`), api("/api/calibration"), api("/api/metrics"), api(`/api/monitor?${query(name)}`),
       ]);
+      const json = async (reply) => (reply.status === "fulfilled" && reply.value.ok ? reply.value.json() : {});
+      const metrics = await json(metricsReply);
+      renderMonitoring(await json(monitorReply));
       if (mine !== showing) return;  // the case changed while these were on their way
 
       if (reportReply.status === "fulfilled" && reportReply.value.ok) showReport(await reportReply.value.text());
@@ -1117,6 +1277,7 @@
       renderFindings(t);
       renderTests(t);
       renderHuman(t);
+      renderMeasures(metrics, t);
       await renderCompare();
     }
 
@@ -1138,6 +1299,52 @@
         status.textContent = `Failed, showing the last saved results. ${error.message}`.slice(0, 200);
       }
       button.disabled = false;
+    }
+
+    // Success measures, each named as the brief names it; numbers from metrics.py and the dry run.
+    function renderMeasures(m, t) {
+      const h = m.held_out || {}, lab = m.labels || {}, carry = m.carry_over || {}, j = m.jury_dryrun || {};
+      const k = t?.scorecard?.coverage || {}, cost = t?.scorecard?.cost || {}, d = t?.decision || {};
+      const f = (r) => (r && r.total ? `${r.hits}/${r.total} (${(100 * r.rate).toFixed(1)}%)` : "-");
+      const votes = d.votes || [], agree = votes.filter((v) => v === d.llm_verdict).length;
+      const rows = [
+        ["Failure and hallucination detection accuracy", `${f(h["Faults caught (recall)"])} planted faults caught; hallucinations ${f(h["Hallucination detection"])}; real findings confirmed by hand ${f(lab.precision_on_real_findings)}`],
+        ["Grounding verification accuracy", f(h["Grounding verification accuracy"])],
+        ["Prompt-injection detection", f(h["Prompt-injection detection"])],
+        ["Low false-positive rate", `${f(h["False alarms on clean answers"])} false alarms on clean answers; ${f(lab.false_finding_rate)} of real findings were false`],
+        ["Test and risk coverage", `${int(k.risks_tested)} of ${int(k.risks_total)} risks, ${int(k.tests)} tests, ${int(k.runs)} answers (this case)`],
+        ["Regression coverage", `stage 1's failed tests rerun: ${f(carry.campus_hardened)} fixed by the hardened prompt, ${f(carry.campus_clean)} by removing the poison`],
+        ["Consistency and explainability", votes.length ? `${agree} of ${votes.length} votes agree; every finding links to the answer and evidence behind it` : "-"],
+        ["Quality of release recommendations", `${f(lab.precision_on_real_findings)} of the real findings behind them confirmed by hand; code vetoes can only make a verdict stricter`],
+        ["Ability to adapt to new jury- provided scenarios", j.seconds ? `${j.tests} new tests, ${j.answers} answers, re-decided in ${j.seconds} s (timed dry run)` : "-"],
+        ["Latency", `the app answers in ${int(cost.latency_ms_p50)} ms (p50), ${int(cost.latency_ms_p95)} ms (p95)`],
+        ["Cost", `${int(cost.llm_calls)} LLM calls, $${num(cost.cost_usd, 4)} for this analysis (estimate)`],
+      ];
+      show("measures-body",
+        el("table", { style: "max-width:1200px" }, el("tbody", {}, ...rows.map(([name, value]) =>
+          el("tr", {}, el("td", { style: "width:380px" }, name), el("td", { class: "mono" }, value))))),
+        el("p", { class: "muted" }, "Planted faults: a held-out seed never used while building. Real findings: 60 answers " +
+          "hand-labelled against LABELS.md. Every rate with its count and 95% interval is in METRICS.md."));
+    }
+
+    function renderMonitoring(mon) {
+      const base = mon?.baseline || {}, last = mon?.last || {};
+      const plan = [
+        ["Every answer", "canary and PII checks before it reaches the user: plain code, no LLM"],
+        ["Hourly", "5% of live answers, at most 200, through the code checks"],
+        ["Daily", "50 of them through the LLM claim judge"],
+        ["Nightly", "the regression suite; weekly, a newly generated suite"],
+        ["Page now", "a leaked secret, a lure the bot points users to, or more critical findings than the baseline"],
+        ["Same day", "overall 5 points under the baseline, a dimension 10 under or below 70, latency p95 over 1.5x"],
+      ];
+      show("monitoring-body",
+        el("div", { class: "kv", style: "grid-template-columns:110px minmax(0,1fr);max-width:1100px" },
+          ...plan.flatMap(([when, what]) => [el("div", { class: "label" }, when), el("div", {}, what)])),
+        el("p", { class: "mono" }, base.overall !== undefined
+          ? `Baseline for this case: overall ${num(base.overall)}, stored ${base.created || "-"}. Last check: ${last.timestamp || "-"}, ` +
+            `overall ${last.overall ?? "-"}, ${last.alerts ?? 0} alerts${last.note ? ` (${last.note})` : ""}.`
+          : "No baseline for this case yet: python3 monitor.py data/sessions/<case>."),
+        el("p", { class: "muted" }, "monitor.py is the working part; the schedule is the plan for a real deployment (MONITORING.md)."));
     }
 
     // "Where you are" in the masthead follows the scrolling.
@@ -1170,7 +1377,7 @@
         answers[name] = answer;
         if (name === "campus_poisoned" && analyzed) select.dataset.main = name;
         caseNames.push(name);
-        select.append(new Option(name, name));
+        select.append(new Option(CASE_LABEL[name] || name, name));
       }
       // A link like /?case=dvla opens that case; otherwise the demo's main case once
       // it has results, so the page never opens on an empty screen.
