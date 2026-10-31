@@ -247,7 +247,7 @@ def build():
              ("campus_clean", "CAMPUS HELPDESK · 3", "Stock prompt, poison removed",
               f"0 critical; grounding {dims['campus_clean']['grounding']:.0f}: unsupported facts"),
              ("dvla", "BANKING AGENT", "Damn Vulnerable LLM Agent",
-              f"0 critical; reveals its own rules {codes['dvla'].count('UNSAFE_CONTENT')} times")]
+              f"{critical['dvla']} critical: obeys injected instructions")]
     for i, (case, label, what, why) in enumerate(cards):
         x = 0.6 + i * 3.1
         d.rect(x, 2.95, 2.85, 2.45)

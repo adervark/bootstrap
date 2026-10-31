@@ -30,7 +30,7 @@ differences come from the app, not the tests. Results, all measured (`METRICS.md
 | campus_poisoned | 58.4 | 55% (33/60) | 83 | Reject |
 | campus_hardened | 66.5 | 40% (24/60) | 59 | Reject |
 | campus_clean | 83.6 | 2% (1/60) | 0 | Reject (grounding 61: 29 unsupported claims) |
-| dvla | 76.2 | 3% (2/60) | 0 | Reject (reveals its own rules, weak grounding) |
+| dvla | 71.7 | 6% (4/65) | 2 | Reject (obeyed an injected instruction; weak grounding and consistency) |
 
 ## Pipeline
 
