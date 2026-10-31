@@ -1,0 +1,206 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Root-cause analysis</title> <!-- PS: name it after the problem -->
+  <script src="/static/chart.umd.js"></script>
+  <script src="/static/marked.min.js"></script>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1100px; margin: 0 auto;
+           padding: 16px; color: #1f2328; background: #fff; }
+    h1 { font-size: 1.4rem; margin-bottom: 8px; }
+    h2 { grid-column: 1 / -1; font-size: 1rem; margin: 12px 0 0; }
+    h3 { font-size: 0.85rem; font-weight: 500; color: #59636e; margin: 0 0 4px; }
+    .muted { color: #59636e; }
+    select, button { font: inherit; }
+    button { padding: 8px 16px; border-radius: 6px; border: 0;
+             background: #1f2328; color: #fff; cursor: pointer; }
+    button:disabled { opacity: 0.5; cursor: wait; }
+    button.view { background: #eff2f5; color: #1f2328; padding: 4px 10px; margin: 0 6px 6px 0; }
+    #charts { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 24px; }
+    .chart { position: relative; height: 140px; }
+    @media (max-width: 700px) { #charts { grid-template-columns: 1fr; } }
+    #report { border-top: 1px solid #d1d9e0; margin-top: 16px; line-height: 1.5; }
+    #report pre { background: #f6f8fa; padding: 12px; overflow-x: auto; font-size: 0.8rem; }
+  </style>
+</head>
+<body>
+  <h1>Root-cause analysis</h1> <!-- PS: the problem in a few words -->
+  <p><label>Case <select id="case"></select></label></p>
+  <p class="muted" id="summary">Loading…</p>
+  <div id="views"></div>
+  <div id="charts"></div>
+  <p><button id="run">Run analysis</button> <span class="muted" id="status"></span></p>
+  <details id="answer">
+    <summary>Answer key (the LLM never sees this)</summary>
+    <p id="answer-text"></p>
+  </details>
+  <article id="report"></article>
+
+  <script>
+    // The page knows no metric names: it draws whatever /api/timeline sends,
+    // one small chart per series, grouped by the file it came from, all on the
+    // same steps so the eye can go down a column.
+    const LINE = "#0969da";
+    let charts = [];
+    let answers = {};
+
+    const currentCase = () => document.getElementById("case").value;
+
+    // Red bands behind the line, one per incident the analysis found.
+    function incidentBands(incidents) {
+      return {
+        id: "incidentBands",
+        beforeDatasetsDraw(chart) {
+          const { ctx, chartArea, scales } = chart;
+          ctx.save();
+          ctx.fillStyle = "rgba(207, 34, 46, 0.15)";
+          for (const { first, last } of incidents) {
+            const left = scales.x.getPixelForValue(first);
+            const right = scales.x.getPixelForValue(last);
+            ctx.fillRect(left, chartArea.top, Math.max(right - left, 3), chartArea.height);
+          }
+          ctx.restore();
+        },
+      };
+    }
+
+    function drawCharts(t, labels) {
+      charts.forEach((chart) => chart.destroy());
+      charts = [];
+      const grid = document.getElementById("charts");
+      grid.innerHTML = "";
+      for (const { source, series } of t.groups) {
+        const heading = document.createElement("h2");
+        heading.textContent = source;
+        grid.append(heading);
+        for (const { name, values } of series) {
+          const panel = document.createElement("div");
+          panel.innerHTML = `<h3></h3><div class="chart"><canvas></canvas></div>`;
+          const datasets = [{ label: name, data: values, borderColor: LINE,
+                              pointRadius: 0, borderWidth: 1.5 }];
+          const limit = t.limits.find((l) => l.name === name);
+          if (limit) {
+            datasets.push({ label: `limit ${limit.sign} ${limit.value}`,
+                            data: values.map(() => limit.value),
+                            borderColor: "#8c959f", borderDash: [4, 4],
+                            pointRadius: 0, borderWidth: 1 });
+          }
+          // textContent, not innerHTML: names come from CSV headers.
+          panel.querySelector("h3").textContent =
+            limit ? `${name}, dashed line = limit (${limit.sign} ${limit.value})` : name;
+          grid.append(panel);
+          charts.push(new Chart(panel.querySelector("canvas"), {
+            type: "line",
+            data: { labels, datasets },
+            options: {
+              maintainAspectRatio: false,
+              animation: false,
+              interaction: { mode: "index", intersect: false },
+              plugins: { legend: { display: false } },
+              scales: {
+                x: { ticks: { maxTicksLimit: 8 } },
+                // Same y-axis width everywhere, so the steps line up across charts.
+                y: { beginAtZero: true, afterFit: (scale) => { scale.width = 50; } },
+              },
+            },
+            plugins: [incidentBands(t.incidents)],
+          }));
+        }
+      }
+    }
+
+    // One button per view: the whole case, then each incident with 30 steps
+    // either side. A view sets the first and last step every chart shows.
+    function drawViews(t, labels) {
+      const box = document.getElementById("views");
+      box.innerHTML = "";
+      const end = t.times.length - 1;
+      const views = [["Whole case", 0, end], ...t.incidents.map(({ first, last }, i) =>
+        [`Incident ${i + 1}: ${labels[first]}–${labels[last]}`,
+         Math.max(first - 30, 0), Math.min(last + 30, end)])];
+      for (const [label, min, max] of views) {
+        const button = document.createElement("button");
+        button.className = "view";
+        button.textContent = label;
+        button.addEventListener("click", () => {
+          for (const chart of charts) {
+            chart.options.scales.x.min = min;
+            chart.options.scales.x.max = max;
+            chart.update();
+          }
+        });
+        box.append(button);
+      }
+    }
+
+    // Log lines can be attacker-controlled (bots choose the URLs they request),
+    // so "<" is escaped before rendering: no raw HTML from the report runs.
+    function showReport(markdown) {
+      document.getElementById("report").innerHTML =
+        marked.parse(markdown.replaceAll("<", "&lt;"));
+    }
+
+    async function showCase() {
+      const name = currentCase();
+      const query = `?case=${encodeURIComponent(name)}`;
+      const summary = document.getElementById("summary");
+      document.getElementById("answer").open = false;
+      document.getElementById("answer-text").textContent = answers[name];
+      showReport(await (await fetch(`/api/report${query}`)).text());
+      const response = await fetch(`/api/timeline${query}`);
+      if (!response.ok) {
+        summary.textContent = `Timeline failed: HTTP ${response.status}. The saved report is below.`;
+        return;
+      }
+      const t = await response.json();
+      // Within one day the axis shows the clock; over several days, the date too.
+      const oneDay = t.times[0].slice(0, 10) === t.times.at(-1).slice(0, 10);
+      const labels = t.times.map((time) => (oneDay ? time.slice(11) : time.slice(5)));
+      const rules = t.limits.map((l) => `${l.name} ${l.sign} ${l.value}`).join(" or ");
+      summary.textContent =
+        `${t.times[0]} to ${t.times.at(-1)}, ${t.times.length} steps, ` +
+        `${t.incidents.length} incident(s) in red. A step is bad when ${rules}.`;
+      drawCharts(t, labels);
+      drawViews(t, labels);
+    }
+
+    async function runAnalysis() {
+      const name = currentCase();
+      const button = document.getElementById("run");
+      const status = document.getElementById("status");
+      button.disabled = true;
+      status.textContent = "Asking the LLM, this takes 1–2 minutes…";
+      try {
+        const response = await fetch(`/api/analyze?case=${encodeURIComponent(name)}`,
+                                      { method: "POST" });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const report = await response.text();
+        if (name === currentCase()) showReport(report);  // skip if the user switched case
+        status.textContent = `Done (${name}).`;
+      } catch (error) {
+        status.textContent = `Failed (${error.message}), showing the last saved report.`;
+      }
+      button.disabled = false;
+    }
+
+    async function start() {
+      const list = await (await fetch("/api/cases")).json();
+      const select = document.getElementById("case");
+      for (const { name, answer } of list) {
+        answers[name] = answer;
+        select.append(new Option(name, name));
+      }
+      // A link like /?case=dataset_C opens that case.
+      const wanted = new URLSearchParams(location.search).get("case");
+      if (wanted in answers) select.value = wanted;
+      select.addEventListener("change", showCase);
+      document.getElementById("run").addEventListener("click", runAnalysis);
+      showCase();
+    }
+
+    start();
+  </script>
+</body>
+</html>
