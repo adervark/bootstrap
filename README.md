@@ -43,7 +43,8 @@ risks.json + jury scenario + past failures
                     + no-KB agreement check (5 samples, no source data)
                     -> failure taxonomy -> 6 scores -> 3 LLM votes -> code vetoes
                     -> Reject blocks; Release waits for a named human
-   -> report.md, results.json, audit.jsonl (hash-chained)
+   -> data/gate.db  SQLite: risks, tests, answers, every analysis, findings, the hash-chained audit
+                    (each case folder keeps CSV/JSON/Markdown exports of the same data)
    -> data/regression/<family>.csv -> rerun on the next version
    -> monitor.py    scores against a baseline, drift alerts (MONITORING.md)
 ```
@@ -53,7 +54,7 @@ risks.json + jury scenario + past failures
 | Input | `risks.json`, the target's `target.json`, a jury scenario, past failures |
 | AI / agents | test generator, claim judge, agreement judge, obey-or-warn stance check, release voter (DeepSeek V4.1 Flash) |
 | Tools | target adapters, citation, canary and PII checks, quote verifier, attack mutators |
-| Data / knowledge | the campus KB, the evaluation suite (`data/suite/`), the regression suite, the calibration sets |
+| Data / knowledge | the campus KB, the SQLite store `data/gate.db`, the evaluation suite (`data/suite/`), the regression suite, the calibration sets |
 | Decisions | six scores, three votes, vetoes V1-V4 that can only make the verdict stricter |
 | Human control | approve, or override with a name and reason; every step in a tamper-evident log |
 | Output | verdict, scorecard, failure taxonomy with evidence, regression suite, monitoring plan |
@@ -66,13 +67,19 @@ bash targets/start.sh                     # the four target apps, 127.0.0.1 only
 set -a; . ./.env; set +a
 python3 generate.py data/sessions/campus_poisoned     # or any case
 python3 execute.py  data/sessions/campus_poisoned
-python3 analyze.py  data/sessions/campus_poisoned     # writes report.md and results.json
+python3 analyze.py  data/sessions/campus_poisoned     # stores the analysis in data/gate.db, exports report.md and results.json
 python3 generate.py data/sessions/campus_poisoned --save-regressions
 python3 calibrate.py --held-out                       # our own accuracy, on fresh seeded faults
 python3 metrics.py                                    # METRICS.md
 .venv/bin/python deck.py                              # deck/LLM_Release_Gate.pptx, numbers read from the results
 .venv/bin/uvicorn app:app                             # the page: http://127.0.0.1:8000
+dbeaver-ce   # or: sqlite3 data/gate.db               # the data; queries.sql holds the questions worth asking
 ```
+
+Every script reads and writes `data/gate.db` through `store.py` (standard-library `sqlite3`, `?` parameters
+only). The files in each case folder are exports, rewritten on every write, so `contracts/check.py` and git
+still see the data; a fresh clone rebuilds the database from them on first use. To put a case back after a
+rehearsal: `git restore data/sessions/<case> && python3 store.py --reset data/sessions/<case>`.
 
 The page shows the saved reports instantly, so it works if the LLM API is down. The
 jury scenario box turns free text into a new risk and new tests, runs them and
@@ -101,6 +108,7 @@ Setting up the target apps' own virtualenvs is in `DECISIONS.md` D1 and
 | Isn't this just a list of prompts? | No. Two generation runs on the same app shared 0 of 31 prompts. Tests come from risks, the app's description, a jury's text and past failures. |
 | Who decides Release? | The LLM votes three times and must cite finding IDs. Code vetoes can only make it stricter. A human must approve any release. |
 | Can the LLM judge be fooled? | Leaked secrets and proof tokens are pure code. A judge's quote must really be in the KB or its verdict is void. The obey-or-warn check fails closed. |
+| Where does the data live? | In one SQLite database, `data/gate.db`: risks, tests, every answer, every analysis (so each app has a history), findings and the audit chain. `queries.sql` answers the jury's questions in SQL, and the attack counts it returns match the page. |
 | The judge and the app are the same model. | Yes, a real limit. That is why we measure the judge against planted faults and hand labels. |
 | How do you know it doesn't cry wolf? | False alarms are measured on clean answers, on answers that warn about a poison, on the clean stage, and on hand-labelled real answers. See `METRICS.md`. |
 | Why is the data synthetic? | The brief requires synthetic or anonymized sensitive data, and planted faults give a known answer to score against. |

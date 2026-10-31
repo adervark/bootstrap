@@ -573,7 +573,7 @@
         options: { indexAxis: "y", layout: { padding: { right: 48 } },
           plugins: { legend: { display: false }, tooltip: { enabled: false }, marks: { unit, limit } },
           scales: { x: { min: 0, max, grid: { color: "#1F1F1F" } },
-                    y: { grid: { display: false }, ticks: { color: "#EDEDED" }, afterFit: (scale) => { scale.width = 190; } } } } });
+                    y: { grid: { display: false }, ticks: { color: "#EDEDED" }, afterFit: (scale) => { scale.width = 220; } } } } });
     }
 
     // Numbers inside a sentence, in mono, so they read the same as every other number on the page.
@@ -1148,7 +1148,7 @@
     function renderDb(db) {
       if (!db?.counts) { show("db-body", el("p", { class: "muted" }, "The database could not be read.")); return; }
       const c = db.counts, short = (name) => name.split("/").pop();
-      const apps = db.cases.map((row) => row.case_name);
+      const apps = db.cases.map((row) => row.case_name).filter((name) => !name.startsWith("contracts/"));  // the sample is not an app
       const codes = [...new Set(db.codes.map((row) => row.code))];
       const count = (app, code) => db.codes.find((row) => row.case_name === app && row.code === code)?.n || 0;
       codes.sort((a, b) => apps.reduce((s, app) => s + count(app, b), 0) - apps.reduce((s, app) => s + count(app, a), 0));

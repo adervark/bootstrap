@@ -224,3 +224,39 @@ to use if a juror asks. Newest last.
   appear as they happen (`job.feed`, filled by app.py from runs.csv and the analysis).
 - Proof: a live jury run in a browser, 48 s, 5 new tests, 5 failed, Reject held; every
   page fits 1440x900 except Tests (45 px over); the page self-test passes 15 of 15.
+
+## D18. One SQLite database is the store (user)
+
+- User asked to "integrate a DB" and chose "Replace the files" over a history-only database
+  or a read-only index, then asked for "a working backend and front end".
+- `store.py` keeps every case in `data/gate.db` (standard-library `sqlite3`, no ORM, every
+  value through a `?` parameter): `risks`, `tests` and `runs` with the contract's columns
+  (read from `contracts/sample/*.csv`), `analyses` (one row per analysis, so a case has a
+  history; the newest is current), `findings`, `audit` and `check_cache`.
+- Every script reads only from the database, through the helpers it already had
+  (`read`, `_read_csv`, `_write_csv`, `read_rows`, `audit.log`), so no logic changed.
+  Each write also rewrites the case folder's CSV/JSON/Markdown export, so
+  `contracts/check.py`, git and a reader still work, and a fresh clone imports them once.
+- The audit chain is now safe under threads: reading the last hash and inserting happen
+  under one SQLite write lock (`BEGIN IMMEDIATE`), so two writers cannot fork the chain.
+- Moving I/O changed `analyze.py`'s bytes, which by design (D16) voids the check cache.
+  The checks did not change, so each case's cache was re-keyed once, old code hash to
+  new. Proof: with the new code every case reused every check (259/259, 260/260 for dvla)
+  and reproduced its stored findings exactly (342, 212, 52, 89) and its overall.
+- Proof of the rest: the import matched the files row for row in all 5 cases; a full
+  jury run went through the database (5 tests, 7 answers, analysis #8 stored beside #7,
+  export identical, audit chain valid, contract check OK); `queries.sql` returns the
+  page's attack counts in plain SQL (33/60, 24/60, 2/60, 1/60).
+- Rehearsal reset is now two steps: `git restore <case>` then `python3 store.py --reset <case>`.
+
+## D19. Charts and a replay (user)
+
+- User asked for "numbers graphs and a simulation" and chose "Replay a full run".
+- Page 2 replays the case's stored run from the database at 220 ms a test: the feed,
+  the failed tests per dimension, attacks that worked as the run went on, then the
+  verdict. The tallies are computed as `analyze.scorecard` counts them; the replay of
+  campus_poisoned ends on 119 tests, 58 failed, 33/60 attacks, 342 findings, matching the
+  stored scorecard. No LLM call, nothing re-run, nothing flashes.
+- The regression page charts attacks that worked and the overall score per version, with
+  the release limit as an amber line. The audit page shows the database: row counts,
+  this case's analyses, and failure codes across the apps.

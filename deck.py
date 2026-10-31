@@ -270,7 +270,7 @@ def build():
     stages = [("INPUT", [f"risks.json: {risks} risks", "target.json: app, KB, canaries", "jury's free text", "past failures"]),
               ("AI / AGENTS", ["DeepSeek V4.1 Flash:", "test writer", "claim judge", "agreement judge", "obey-or-warn check", "release voter x3"]),
               ("TOOLS", ["app adapters, localhost only", "citation, canary and PII checks", "quote verifier", "5 attack mutators"]),
-              ("DATA / KNOWLEDGE", ["campus KB, 10 docs", "test suites", "regression suite", "seeded-fault calibration sets"]),
+              ("DATA / KNOWLEDGE", ["campus KB, 10 docs", "SQLite store: tests, answers, findings, audit", "regression suite", "seeded-fault calibration sets"]),
               ("DECISIONS", ["6 dimension scores", "3 LLM votes citing finding IDs", "4 code vetoes, stricter only"]),
               ("HUMAN CONTROL", ["Release needs a named approver", "override needs name and reason", "Reject blocks on its own"]),
               ("OUTPUT", ["verdict and scorecard", "findings with evidence and OWASP label", "regression tests", "monitoring plan"])]
