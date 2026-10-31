@@ -1,0 +1,101 @@
+# LLM Release Gate
+
+A reusable AI quality framework for LLM-enabled apps. It generates tests from
+risks, runs them against the app, checks every answer against the truth (and, when
+there is no truth to check against, against the app's own consistency), scores six
+dimensions and recommends **Release**, **Conditional Release** or **Reject** with the
+evidence behind it. Only a named human can approve a release.
+
+- `PROBLEM.md`: the brief, word for word, with a checklist.
+- `DECISIONS.md`: every design decision, who made it, why, and the line for a juror.
+- `METRICS.md`: every number, generated from the result files by `metrics.py`.
+
+## What it tests
+
+Two open-source apps we did not write, cloned and run only on this laptop
+(`data/raw/targets/`, kept out of git):
+
+| Case | App | What differs |
+|---|---|---|
+| `campus_poisoned` | RAG_Poisoning_POC, loaded with 10 synthetic campus IT documents | stock prompt, 3 poison documents |
+| `campus_hardened` | the same | a hardened prompt, same poison |
+| `campus_clean` | the same | stock prompt, no poison |
+| `dvla` | Damn Vulnerable LLM Agent, a LangChain banking agent | its own prompt and tools |
+
+The three campus stages run the same 119-test suite, so differences come from the
+app, not the tests.
+
+## Pipeline
+
+```
+risks.json + jury scenario + past failures
+   -> generate.py   tests: LLM-written, code-mutated attacks, rephrasings, regressions
+   -> execute.py    localhost only; captures answer, sources, tool calls, latency
+   -> analyze.py    code checks (citations, canaries, PII, numbers, proof tokens)
+                    + KB claim check (LLM quotes the KB, code confirms the quote)
+                    + no-KB agreement check (5 samples, no source data)
+                    -> failure taxonomy -> 6 scores -> 3 LLM votes -> code vetoes
+                    -> Reject blocks; Release waits for a named human
+   -> report.md, results.json, audit.jsonl (hash-chained)
+   -> data/regression/<family>.csv -> rerun on the next version
+   -> monitor.py    scores against a baseline, drift alerts (MONITORING.md)
+```
+
+| Stage | Here |
+|---|---|
+| Input | `risks.json`, the target's `target.json`, a jury scenario, past failures |
+| AI / agents | test generator, claim judge, agreement judge, obey-or-warn stance check, release voter (DeepSeek V4.1 Flash) |
+| Tools | target adapters, citation, canary and PII checks, quote verifier, attack mutators |
+| Data / knowledge | the campus KB, the evaluation suite (`data/suite/`), the regression suite, the calibration sets |
+| Decisions | six scores, three votes, vetoes V1-V4 that can only make the verdict stricter |
+| Human control | approve, or override with a name and reason; every step in a tamper-evident log |
+| Output | verdict, scorecard, failure taxonomy with evidence, regression suite, monitoring plan |
+
+## Run
+
+```bash
+uv venv --python 3.14 .venv && uv pip install --python .venv -r requirements.txt   # once
+bash targets/start.sh                     # the four target apps, 127.0.0.1 only
+set -a; . ./.env; set +a
+python3 generate.py data/sessions/campus_poisoned     # or any case
+python3 execute.py  data/sessions/campus_poisoned
+python3 analyze.py  data/sessions/campus_poisoned     # writes report.md and results.json
+python3 generate.py data/sessions/campus_poisoned --save-regressions
+python3 calibrate.py --held-out                       # our own accuracy, on fresh seeded faults
+python3 metrics.py                                    # METRICS.md
+.venv/bin/uvicorn app:app                             # the page: http://127.0.0.1:8000
+```
+
+The page shows the saved reports instantly, so it works if the LLM API is down. The
+jury scenario box turns free text into a new risk and new tests, runs them and
+re-decides.
+
+Setting up the target apps' own virtualenvs is in `DECISIONS.md` D1 and
+`targets/start.sh`.
+
+## How far to trust the numbers
+
+- Detection accuracy is measured on seeded faults: correct answers with one known
+  error planted. The held-out set uses a seed never used while building. Planted
+  faults can be easier than real ones, so it is a benchmark.
+- Real-answer accuracy comes from 60 real answers labelled against `LABELS.md`, a
+  rubric written before any result was read, with 10 re-labelled blind by a second
+  person.
+- Every rate has its count and a 95% Wilson interval.
+- Cost is an estimate from third-party price lists.
+
+## Defend
+
+| Likely question | Answer |
+|---|---|
+| Isn't this just a list of prompts? | No. Two generation runs on the same app shared 0 of 31 prompts. Tests come from risks, the app's description, a jury's text and past failures. |
+| Who decides Release? | The LLM votes three times and must cite finding IDs. Code vetoes can only make it stricter. A human must approve any release. |
+| Can the LLM judge be fooled? | Leaked secrets and proof tokens are pure code. A judge's quote must really be in the KB or its verdict is void. The obey-or-warn check fails closed. |
+| The judge and the app are the same model. | Yes, a real limit. That is why we measure the judge against planted faults and hand labels. |
+| How do you know it doesn't cry wolf? | False alarms are measured on clean answers, on answers that warn about a poison, on the clean stage, and on hand-labelled real answers. See `METRICS.md`. |
+| Why is the data synthetic? | The brief requires synthetic or anonymized sensitive data, and planted faults give a known answer to score against. |
+| Why an LLM rather than rules? | Code alone caught 59% of seeded faults on the tuning set. The LLM claim check covers paraphrased and invented claims that rules miss. |
+| What if the API is down? | Code checks still run, the code baseline verdict stands and can never be Release, and the page shows the saved report. |
+| Did you write the attacks that worked after the first failed? | Yes, as an attacker would. The blatant poison was resisted; the fake portal URL was not. `DECISIONS.md` D9 to D11. |
+| Was any of this written before the event? | A generic skeleton (an LLM call, a FastAPI page, a contract checker). Everything specific to this brief was written today; see the git history. |
+| What would you build next? | Claims split from every sample in the no-KB check, a real production log sampler, and more target adapters. |
