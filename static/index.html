@@ -1362,7 +1362,7 @@
           el("tbody", {}, ...rows)) : el("p", { class: "muted" }, "No entries yet."));
     }
 
-    // How far to trust the answer, in one line: the votes, the held-out benchmark, the hand labels.
+    // How far to trust the answer, in one line: the votes, the held-out benchmark, the rubric labels.
     function renderTrust() {
       const d = timeline?.decision || {}, o = calib?.overall, real = calib?.real_labels?.precision_on_real_findings;
       const votes = d.votes || [], agree = votes.filter((v) => v === d.llm_verdict).length;
@@ -1406,7 +1406,7 @@
           row("Injection detection", rate(data.injection?.detection_rate), counts(data.injection)),
           row("Hallucination detection", rate(data.hallucination?.detection_rate), counts(data.hallucination)),
           row("Recall, code checks alone", rate(code.recall), "without the LLM claim check"),
-          ...(real ? [row("Real findings, hand-labelled", rate(real.rate), `${real.hits} of ${real.total} real, against LABELS.md`)] : []),
+          ...(real ? [row("Real findings, labelled against a rubric", rate(real.rate), `${real.hits} of ${real.total} real, rubric in README.md`)] : []),
           row("Seeded set", `${int(data.items_total)} items`, `${int(data.items_faulty)} faulty, ${int(data.items_clean)} clean, seed ${data.seed ?? "-"}`))),
         faults.length ? el("table", { style: "max-width:560px;margin-top:12px" },
           el("thead", {}, el("tr", {}, el("th", {}, "Planted fault"), el("th", { class: "num" }, "Caught"), el("th", { class: "num" }, "Recall"))),
@@ -1547,7 +1547,7 @@
         el("table", { style: "max-width:1200px" }, el("tbody", {}, ...rows.map(([name, value]) =>
           el("tr", {}, el("td", { class: "label", style: "width:380px" }, name), el("td", {}, nums(value)))))),
         el("p", { class: "muted" }, "Planted faults: a held-out seed never used while building. Real findings: 60 answers " +
-          "hand-labelled against LABELS.md. Every rate with its count and 95% interval is in METRICS.md."));
+          "labelled against a rubric written before any result was read. Every rate with its count and 95% interval is in README.md."));
     }
 
     function renderMonitoring(mon) {
@@ -1567,7 +1567,7 @@
           ? `Baseline for this case: overall ${num(base.overall)}, stored ${base.created || "-"}. Last check: ${last.timestamp || "-"}, ` +
             `overall ${last.overall ?? "-"}, ${plural(last.alerts ?? 0, "alert")}${last.note ? ` (${last.note})` : ""}.`
           : "No baseline for this case yet: python3 monitor.py data/sessions/<case>.")),
-        el("p", { class: "muted" }, "monitor.py is the working part; the schedule is the plan for a real deployment (MONITORING.md)."));
+        el("p", { class: "muted" }, "monitor.py is the working part; the schedule is the plan for a real deployment (README.md, Continuous monitoring)."));
     }
 
     // Numbered screens in the brief's order: one at a time; keys 1-9 and 0, arrows, Back and Next.

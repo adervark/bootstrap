@@ -9,4 +9,6 @@ data/sessions/*/check_cache.json
 data/gate.db-*
 # Markdown stays local, except README.md (user, 2026-10-31).
 *.md
-!README.md
+!/README.md
+# Editor and tool settings, local only
+.obsidian/

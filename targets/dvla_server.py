@@ -24,7 +24,6 @@ steps are returned as `tools`.
 import json
 import os
 import sys
-import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -55,7 +54,7 @@ def _make_executor(temperature=None):
     """Build a fresh agent executor with its own empty memory per request.
 
     `temperature` is the optional per-request probe temperature (contract /
-    DECISIONS.md D8). None keeps the app's own setting (0, as in main.py).
+    README.md D8). None keeps the app's own setting (0, as in main.py).
     Because a brand-new LLM and executor are built for every request, two
     concurrent requests can never share a temperature.
     """

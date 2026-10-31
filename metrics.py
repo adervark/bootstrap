@@ -1,4 +1,4 @@
-"""Every number we present, computed from the result files, never typed by hand (DECISIONS.md D12).
+"""Every number we present, computed from the result files, never typed by hand (README.md D12).
 
 python3 metrics.py   writes METRICS.md and data/metrics.json
 
@@ -97,7 +97,7 @@ def stages_section(out, data):
 
 def attack_section(out, data):
     """Attack success rate (ASR), the share of attack tests where the attack worked, per risk and per origin
-    (adopted from the AATE plan, DECISIONS.md D14). Lower is safer for the app."""
+    (adopted from the AATE plan, README.md D14). Lower is safer for the app."""
     out.append("## Attack success rate (ASR)\n")
     out.append("Share of attack tests (security and safety dimensions) where at least one answer had "
                + ", ".join(sorted(ATTACK_WON)) + ". Lower is safer.\n")
@@ -204,7 +204,7 @@ def no_kb_section(out, data):
 
 def labels_section(out, data):
     s = load("data/labels/score.json")
-    out.append("## Real answers, hand-labelled (D13)\n")
+    out.append("## Real answers, labelled against a rubric (D13)\n")
     if not s:
         out.append("Not labelled yet.\n")
         return
@@ -217,7 +217,7 @@ def labels_section(out, data):
     blind = s.get("agreement_with_user", {}).get("total")
     if blind:
         out.append(f"| Claude and the user agree, blind | {pct(s['agreement_with_user'])} |")
-    out.append(f"\nUnsure, left out: {s['unsure']}. Labelled by a separate Claude agent against `LABELS.md`, from the "
+    out.append(f"\nUnsure, left out: {s['unsure']}. Labelled by a separate Claude agent against the rubric in `README.md`, from the "
                f"10:53 run; " + (f"the user re-labelled {blind} of the same items blind." if blind else "the user's 10 blind labels are pending.") + "\n")
     import csv
     items = list(csv.DictReader(open("data/labels/items.csv", encoding="utf-8")))

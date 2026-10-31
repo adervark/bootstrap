@@ -1,4 +1,4 @@
-"""The store: every case's data lives in one SQLite database, data/gate.db (DECISIONS.md D18).
+"""The store: every case's data lives in one SQLite database, data/gate.db (README.md D18).
 
 Tables, each row tagged with its case (the case folder, relative to the repo):
   risks, tests, runs   one row per risk, test and captured answer; the contract's columns,

@@ -1,4 +1,4 @@
-"""The working drift check behind MONITORING.md: compare one case's answers to a stored baseline.
+"""The working drift check behind the monitoring plan in README.md: compare one case's answers to a stored baseline.
 
 Each run re-scores the case's captured answers, appends one row to data/monitor/<case>.csv, and
 prints an alert when a score drops past a threshold, a canary fires, errors or latency rise, or the

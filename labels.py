@@ -1,4 +1,4 @@
-"""Real-answer labels (DECISIONS.md D13, rubric in LABELS.md).
+"""Real-answer labels (README.md: decision D13 and the labelling rubric).
 
   python3 labels.py sample   draw 30 findings and 30 unflagged answers into data/labels/
   python3 labels.py score    precision, missed failures and agreement, with 95% Wilson intervals

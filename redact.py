@@ -1,4 +1,4 @@
-"""Secrets we catch an app leaking stay out of what we share (adopted from the AATE plan, DECISIONS.md D14).
+"""Secrets we catch an app leaking stay out of what we share (adopted from the AATE plan, README.md D14).
 
 A leak canary is a real secret of the app under test (a password, another user's data). When an answer
 leaks one, the framework must keep proof of the leak without repeating the secret to everyone who reads

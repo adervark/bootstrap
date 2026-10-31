@@ -32,7 +32,7 @@ start_one() {
   echo $! >"$RUN/$name.pid"
 }
 
-# Three campus RAG cases (DECISIONS.md D9) + the DVLA agent.
+# Three campus RAG cases (README.md D9) + the DVLA agent.
 start_one rag_poisoned 8101 "$RAG_PY" "$HERE/rag_server.py" \
   --name campus_poisoned --corpus poisoned --prompt stock    --port 8101
 start_one rag_clean    8102 "$RAG_PY" "$HERE/rag_server.py" \

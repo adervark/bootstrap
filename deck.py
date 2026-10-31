@@ -1,4 +1,4 @@
-"""The five-slide deck (DECISIONS.md D3), built from the result files so every number is measured.
+"""The five-slide deck (README.md D3), built from the result files so every number is measured.
 
   .venv/bin/python deck.py      -> deck/LLM_Release_Gate.pptx and deck/preview/slide-N.png
 
@@ -353,7 +353,7 @@ def build():
     rec, fa, code_only = held["Faults caught (recall)"], held["False alarms on clean answers"], held["Faults caught by code checks alone, no LLM"]
     labelled = (f"{labels['precision_on_real_findings']['hits']}/{labels['precision_on_real_findings']['total']}"
                 if labels and labels.get("precision_on_real_findings", {}).get("total") else "pending")
-    d.slide(f"Every number has its count and a 95% interval in METRICS.md. Held out means a seed we never looked at while building. "
+    d.slide(f"Every number has its count and a 95% interval in the README. Held out means a seed we never looked at while building. "
             f"Code alone catches {frac(code_only)}; the LLM judge brings it to {frac(rec)}. A repeat run gave "
             f"{run1['true_positive']}/96 and {run1['false_positive']}/96, so the spread is a couple of items. We also audited our "
             f"own critical findings and fixed three bugs that caused 11 false alarms. Responsible AI is built in, not added. "
@@ -362,7 +362,7 @@ def build():
     callouts = [(frac(rec), f"planted faults caught, held-out seed ({ci(rec)})"),
                 (frac(fa), f"false alarms on clean answers; repeat run {run1['true_positive']}/96 caught, {run1['false_positive']}/96 false"),
                 (frac(code_only), f"caught by code alone: the LLM judge adds {rec['hits'] - code_only['hits']}"),
-                (labelled, "real findings confirmed by hand labels (real faults are harder)")]
+                (labelled, "real findings confirmed by rubric labels (real faults are harder)")]
     for i, (number, label) in enumerate(callouts):
         x, y = 0.6 + (i % 2) * 3.2, 1.75 + (i // 2) * 1.75
         d.rect(x, y, 3.0, 1.55)
@@ -372,7 +372,7 @@ def build():
     items = list(csv.DictReader(open("data/labels/items.csv", encoding="utf-8"))) if Path("data/labels/items.csv").exists() else []
     hard = [i for i in items if i["kind"] == "flagged" and i["code"] in ("PROMPT_INJECTION", "HALLUCINATION")]
     soft = [i for i in items if i["kind"] == "flagged" and i["code"] in ("OVER_REFUSAL", "INCONSISTENT", "INCOMPLETE", "LOW_AGREEMENT")]
-    labelled_split = (f"hand labels found {sum(i['label'] == 'true' for i in hard)}/{len(hard)} injection and hallucination "
+    labelled_split = (f"rubric labels found {sum(i['label'] == 'true' for i in hard)}/{len(hard)} injection and hallucination "
                       f"findings real, and {sum(i['label'] == 'true' for i in soft)}/{len(soft)} of the softer medium ones.")
     d.text(0.6, 5.3, 6.2, 1.95, [
         [("Without documents: ", {"bold": True}), (f"sample agreement caught {frac(nokb) if nokb else 'n/a'} errors the KB check "

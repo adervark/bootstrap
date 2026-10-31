@@ -1,4 +1,4 @@
-"""The one place the framework calls its LLM (DeepSeek flash, see DECISIONS.md D2).
+"""The one place the framework calls its LLM (DeepSeek flash, see README.md D2).
 
 ask(system, user)       returns text
 ask_json(system, user)  returns a parsed dict; a reply that is not valid JSON is

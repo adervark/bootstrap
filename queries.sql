@@ -1,4 +1,4 @@
--- Queries for data/gate.db (store.py, DECISIONS.md D18). Open the file in DBeaver's SQL editor
+-- Queries for data/gate.db (store.py, README.md D18). Open the file in DBeaver's SQL editor
 -- on the "LLM Release Gate (gate.db)" connection and run one with Ctrl+Enter.
 -- "Current" means each case's newest analysis; older analyses stay as its history.
 

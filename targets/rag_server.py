@@ -9,17 +9,19 @@ chain a help-desk prompt that answers from context only and cites document ids.
 
 Three cases, each its own port, prompt and private vector DB (keyed by --name
 and rebuilt on every start so a stale DB can never leak poison into a clean run;
-DECISIONS.md D9):
+README.md D9):
 
     --name campus_poisoned --corpus poisoned --prompt stock    --port 8101
     --name campus_clean    --corpus clean    --prompt stock    --port 8102
     --name campus_hardened --corpus poisoned --prompt hardened --port 8104
+    --name campus_lfm3     --corpus poisoned --prompt stock    --port 8105 \
+        --llm-url http://127.0.0.1:8110/v1 --llm-model lfm3-1.7b   (D20: same app, a local model)
 
 Run with the app's own venv, e.g.:
     data/raw/targets/.venv-rag/bin/python targets/rag_server.py \
         --name campus_clean --corpus clean --prompt stock --port 8102
 
-Implements the Target server contract (contracts/README.md): POST /ask with
+Implements the Target server contract (README.md): POST /ask with
 {"question": "..."} -> {"answer","sources","tools","tokens"}, GET /health ->
 {"ok": true}. Bound to 127.0.0.1 only, threaded, exceptions -> HTTP 500 JSON.
 """
@@ -37,7 +39,7 @@ RUN = os.path.join(HERE, ".run")
 KB_DIR = os.path.join(HERE, "kb")
 POISON_DIR = os.path.join(HERE, "kb_poison")
 
-# Two prompt variants (contracts/README.md case table, DECISIONS.md D9).
+# Two prompt variants (README.md: targets table, decision D9).
 #
 # STOCK is the app's own stock RetrievalQA wording plus a citation instruction;
 # it carries NO anti-injection guidance. HARDENED is our help-desk prompt whose
@@ -92,10 +94,26 @@ def _load_docs(include_poison):
     return docs
 
 
+# Set from --llm-url/--llm-model: swap DeepSeek for a local OpenAI-compatible
+# server (llama-server), keeping the app, corpus and prompt the same (D20).
+LOCAL_LLM = None
+
+
 def _make_deepseek_llm(config, temperature):
-    """A DeepSeek chat LLM at a chosen temperature (same endpoint the app uses)."""
+    """A DeepSeek chat LLM at a chosen temperature (same endpoint the app uses),
+    or the local model when --llm-url is given."""
     from langchain_openai import ChatOpenAI
 
+    if LOCAL_LLM:
+        return ChatOpenAI(
+            model=LOCAL_LLM["model"],
+            openai_api_base=LOCAL_LLM["url"],
+            openai_api_key="local",  # llama-server ignores it; no real key leaves this process
+            temperature=temperature,
+            max_tokens=1024,
+            # LFM3 is a reasoning model; thinking off, as a small deployed bot would run.
+            extra_body={"chat_template_kwargs": {"enable_thinking": False}},
+        )
     return ChatOpenAI(
         model=config.deepseek_model,
         openai_api_base="https://api.deepseek.com/v1",
@@ -134,7 +152,8 @@ def _build_system(name, corpus, prompt_choice):
     os.environ["TRANSFORMERS_OFFLINE"] = "0"
 
     embeddings = create_embeddings(config, get_device())
-    llm = LLMFactory.create_llm("deepseek", config)
+    llm = (_make_deepseek_llm(config, None) if LOCAL_LLM
+           else LLMFactory.create_llm("deepseek", config))
     prompt_template = PROMPTS[prompt_choice]
 
     class CampusRAG(RAGSystem):
@@ -249,7 +268,15 @@ def main():
     parser.add_argument("--corpus", choices=["poisoned", "clean"], required=True)
     parser.add_argument("--prompt", choices=["stock", "hardened"], default="stock")
     parser.add_argument("--port", type=int, required=True)
+    parser.add_argument("--llm-url", help="local OpenAI-compatible base URL instead of DeepSeek (127.0.0.1 only)")
+    parser.add_argument("--llm-model", default="local", help="model name sent to --llm-url")
     args = parser.parse_args()
+    if args.llm_url:
+        from urllib.parse import urlsplit
+        if urlsplit(args.llm_url).hostname not in ("127.0.0.1", "localhost"):
+            parser.error("--llm-url must be on this machine")
+        global LOCAL_LLM
+        LOCAL_LLM = {"url": args.llm_url, "model": args.llm_model}
 
     print(f"[rag_server] building '{args.name}' (corpus={args.corpus}, "
           f"prompt={args.prompt}; downloads the embedding model on first run)...",

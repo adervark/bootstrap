@@ -1,4 +1,4 @@
-"""We test the tester (DECISIONS.md D6): how accurate is verify_answer on faults we planted?
+"""We test the tester (README.md D6): how accurate is verify_answer on faults we planted?
 
 From the KB of every target.json available, code builds a labelled set: correct answers made
 from real KB sentences, and the same answers with one known fault seeded in. Each answer goes

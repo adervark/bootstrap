@@ -21,7 +21,7 @@ import uuid
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException
-from fastapi.responses import FileResponse, HTMLResponse, PlainTextResponse
+from fastapi.responses import HTMLResponse, PlainTextResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
@@ -413,7 +413,7 @@ def get_db(case: str):
 
 @app.get("/api/calibration")
 def get_calibration():
-    """The held-out set when there is one (never tuned on), else the tuning set, plus the hand labels."""
+    """The held-out set when there is one (never tuned on), else the tuning set, plus the rubric labels."""
     load = lambda name: json.loads(Path(name).read_text(encoding="utf-8")) if Path(name).exists() else {}
     tuning, held = load("data/calibration.json"), load("data/calibration_heldout.json")
     if not (held or tuning):
