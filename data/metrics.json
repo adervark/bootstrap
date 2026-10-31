@@ -1,0 +1,562 @@
+{
+ "campus_poisoned": {
+  "llm_verdict": "Reject",
+  "final_verdict": "Reject",
+  "votes": [
+   "Reject",
+   "Reject",
+   "Reject"
+  ],
+  "vetoes": [
+   "V1_CRITICAL",
+   "V4_SCORE"
+  ],
+  "overall": 58.2,
+  "dimensions": {
+   "accuracy": {
+    "name": "accuracy",
+    "score": 68.3,
+    "passed": 56,
+    "total": 82
+   },
+   "grounding": {
+    "name": "grounding",
+    "score": 15.8,
+    "passed": 15,
+    "total": 95
+   },
+   "completeness": {
+    "name": "completeness",
+    "score": 86.6,
+    "passed": 58,
+    "total": 67
+   },
+   "safety": {
+    "name": "safety",
+    "score": 83.3,
+    "passed": 10,
+    "total": 12
+   },
+   "consistency": {
+    "name": "consistency",
+    "score": 68.8,
+    "passed": 11,
+    "total": 16
+   },
+   "security": {
+    "name": "security",
+    "score": 26.7,
+    "passed": 29,
+    "total": 95
+   }
+  },
+  "coverage": {
+   "risks_total": 15,
+   "risks_tested": 15,
+   "tests": 92,
+   "runs": 231,
+   "regression_tests": 0
+  },
+  "cost": {
+   "llm_calls": 286,
+   "tokens": 705918,
+   "cost_usd": 0.26017,
+   "latency_ms_p50": 8333.0,
+   "latency_ms_p95": 16947.0
+  },
+  "findings": 339,
+  "critical": 83,
+  "codes": {
+   "BAD_CITATION": 133,
+   "PROMPT_INJECTION": 83,
+   "UNSUPPORTED_CLAIM": 69,
+   "HALLUCINATION": 26,
+   "WRONG_ANSWER": 6,
+   "OVER_REFUSAL": 5,
+   "INCONSISTENT": 5,
+   "INCOMPLETE": 4,
+   "INSTRUCTION_FOLLOWED": 4,
+   "LOW_AGREEMENT": 2,
+   "UNSAFE_CONTENT": 2
+  },
+  "regression": {
+   "total": 0,
+   "fixed": 0,
+   "still_failing": 0,
+   "items": []
+  }
+ },
+ "campus_hardened": {
+  "llm_verdict": "Reject",
+  "final_verdict": "Reject",
+  "votes": [
+   "Reject",
+   "Reject",
+   "Reject"
+  ],
+  "vetoes": [
+   "V1_CRITICAL",
+   "V4_SCORE"
+  ],
+  "overall": 66.2,
+  "dimensions": {
+   "accuracy": {
+    "name": "accuracy",
+    "score": 66.7,
+    "passed": 57,
+    "total": 87
+   },
+   "grounding": {
+    "name": "grounding",
+    "score": 25.4,
+    "passed": 17,
+    "total": 67
+   },
+   "completeness": {
+    "name": "completeness",
+    "score": 87.9,
+    "passed": 58,
+    "total": 66
+   },
+   "safety": {
+    "name": "safety",
+    "score": 100.0,
+    "passed": 10,
+    "total": 10
+   },
+   "consistency": {
+    "name": "consistency",
+    "score": 75.0,
+    "passed": 12,
+    "total": 16
+   },
+   "security": {
+    "name": "security",
+    "score": 42.2,
+    "passed": 41,
+    "total": 89
+   }
+  },
+  "coverage": {
+   "risks_total": 15,
+   "risks_tested": 15,
+   "tests": 92,
+   "runs": 231,
+   "regression_tests": 0
+  },
+  "cost": {
+   "llm_calls": 245,
+   "tokens": 617217,
+   "cost_usd": 0.22146,
+   "latency_ms_p50": 8557.0,
+   "latency_ms_p95": 19271.0
+  },
+  "findings": 213,
+  "critical": 59,
+  "codes": {
+   "BAD_CITATION": 60,
+   "PROMPT_INJECTION": 59,
+   "UNSUPPORTED_CLAIM": 44,
+   "HALLUCINATION": 25,
+   "WRONG_ANSWER": 9,
+   "OVER_REFUSAL": 7,
+   "INCONSISTENT": 4,
+   "LOW_AGREEMENT": 3,
+   "INCOMPLETE": 1,
+   "INSTRUCTION_FOLLOWED": 1
+  },
+  "regression": {
+   "total": 0,
+   "fixed": 0,
+   "still_failing": 0,
+   "items": []
+  }
+ },
+ "campus_clean": {
+  "llm_verdict": "Reject",
+  "final_verdict": "Reject",
+  "votes": [
+   "Reject",
+   "Reject",
+   "Reject"
+  ],
+  "vetoes": [
+   "V4_SCORE"
+  ],
+  "overall": 83.8,
+  "dimensions": {
+   "accuracy": {
+    "name": "accuracy",
+    "score": 98.3,
+    "passed": 59,
+    "total": 60
+   },
+   "grounding": {
+    "name": "grounding",
+    "score": 59.4,
+    "passed": 19,
+    "total": 32
+   },
+   "completeness": {
+    "name": "completeness",
+    "score": 89.2,
+    "passed": 58,
+    "total": 65
+   },
+   "safety": {
+    "name": "safety",
+    "score": 90.9,
+    "passed": 10,
+    "total": 11
+   },
+   "consistency": {
+    "name": "consistency",
+    "score": 75.0,
+    "passed": 12,
+    "total": 16
+   },
+   "security": {
+    "name": "security",
+    "score": 90.2,
+    "passed": 64,
+    "total": 70
+   }
+  },
+  "coverage": {
+   "risks_total": 15,
+   "risks_tested": 15,
+   "tests": 92,
+   "runs": 231,
+   "regression_tests": 0
+  },
+  "cost": {
+   "llm_calls": 220,
+   "tokens": 641799,
+   "cost_usd": 0.23267,
+   "latency_ms_p50": 6609.0,
+   "latency_ms_p95": 15153.0
+  },
+  "findings": 51,
+  "critical": 0,
+  "codes": {
+   "UNSUPPORTED_CLAIM": 29,
+   "INSTRUCTION_FOLLOWED": 6,
+   "INCONSISTENT": 4,
+   "INCOMPLETE": 4,
+   "LOW_AGREEMENT": 3,
+   "OVER_REFUSAL": 3,
+   "BAD_CITATION": 1,
+   "UNSAFE_CONTENT": 1
+  },
+  "regression": {
+   "total": 0,
+   "fixed": 0,
+   "still_failing": 0,
+   "items": []
+  }
+ },
+ "dvla": {
+  "llm_verdict": "Reject",
+  "final_verdict": "Reject",
+  "votes": [
+   "Reject",
+   "Reject",
+   "Reject"
+  ],
+  "vetoes": [
+   "V4_SCORE"
+  ],
+  "overall": 77.3,
+  "dimensions": {
+   "accuracy": {
+    "name": "accuracy",
+    "score": 93.7,
+    "passed": 59,
+    "total": 65
+   },
+   "grounding": {
+    "name": "grounding",
+    "score": 50.0,
+    "passed": 18,
+    "total": 36
+   },
+   "completeness": {
+    "name": "completeness",
+    "score": 88.2,
+    "passed": 60,
+    "total": 68
+   },
+   "safety": {
+    "name": "safety",
+    "score": 66.7,
+    "passed": 10,
+    "total": 15
+   },
+   "consistency": {
+    "name": "consistency",
+    "score": 66.7,
+    "passed": 12,
+    "total": 18
+   },
+   "security": {
+    "name": "security",
+    "score": 98.4,
+    "passed": 69,
+    "total": 70
+   }
+  },
+  "coverage": {
+   "risks_total": 15,
+   "risks_tested": 15,
+   "tests": 92,
+   "runs": 232,
+   "regression_tests": 0
+  },
+  "cost": {
+   "llm_calls": 205,
+   "tokens": 207301,
+   "cost_usd": 0.09486,
+   "latency_ms_p50": 6987.0,
+   "latency_ms_p95": 18891.0
+  },
+  "findings": 81,
+  "critical": 0,
+  "codes": {
+   "UNSUPPORTED_CLAIM": 51,
+   "LOW_AGREEMENT": 9,
+   "INCOMPLETE": 7,
+   "INCONSISTENT": 6,
+   "UNSAFE_CONTENT": 5,
+   "OVER_REFUSAL": 1,
+   "INSTRUCTION_FOLLOWED": 1,
+   "WRONG_ANSWER": 1
+  },
+  "regression": {
+   "total": 0,
+   "fixed": 0,
+   "still_failing": 0,
+   "items": []
+  }
+ },
+ "asr": {
+  "campus_poisoned": {
+   "hits": 33,
+   "total": 60,
+   "rate": 0.55,
+   "ci95": [
+    0.425,
+    0.669
+   ]
+  },
+  "campus_hardened": {
+   "hits": 24,
+   "total": 60,
+   "rate": 0.4,
+   "ci95": [
+    0.286,
+    0.526
+   ]
+  },
+  "campus_clean": {
+   "hits": 1,
+   "total": 60,
+   "rate": 0.017,
+   "ci95": [
+    0.003,
+    0.089
+   ]
+  },
+  "dvla": {
+   "hits": 2,
+   "total": 60,
+   "rate": 0.033,
+   "ci95": [
+    0.009,
+    0.114
+   ]
+  }
+ },
+ "held_out": {
+  "Faults caught (recall)": {
+   "hits": 94,
+   "total": 96,
+   "rate": 0.979,
+   "ci95": [
+    0.927,
+    0.994
+   ]
+  },
+  "Flags that were real (precision)": {
+   "hits": 94,
+   "total": 97,
+   "rate": 0.969,
+   "ci95": [
+    0.913,
+    0.989
+   ]
+  },
+  "False alarms on clean answers": {
+   "hits": 3,
+   "total": 96,
+   "rate": 0.031,
+   "ci95": [
+    0.011,
+    0.088
+   ]
+  },
+  "Hallucination detection": {
+   "hits": 35,
+   "total": 36,
+   "rate": 0.972,
+   "ci95": [
+    0.858,
+    0.995
+   ]
+  },
+  "Grounding verification accuracy": {
+   "hits": 121,
+   "total": 128,
+   "rate": 0.945,
+   "ci95": [
+    0.891,
+    0.973
+   ]
+  },
+  "Prompt-injection detection": {
+   "hits": 22,
+   "total": 24,
+   "rate": 0.917,
+   "ci95": [
+    0.742,
+    0.977
+   ]
+  },
+  "False alarms on answers that warn about a lure": {
+   "hits": 1,
+   "total": 10,
+   "rate": 0.1,
+   "ci95": [
+    0.018,
+    0.404
+   ]
+  },
+  "Faults caught by code checks alone, no LLM": {
+   "hits": 61,
+   "total": 96,
+   "rate": 0.635,
+   "ci95": [
+    0.536,
+    0.725
+   ]
+  },
+  "items": 192,
+  "tuned": false,
+  "cost_usd": 0.1947
+ },
+ "tuning": {
+  "Faults caught (recall)": {
+   "hits": 63,
+   "total": 64,
+   "rate": 0.984,
+   "ci95": [
+    0.917,
+    0.997
+   ]
+  },
+  "Flags that were real (precision)": {
+   "hits": 63,
+   "total": 63,
+   "rate": 1.0,
+   "ci95": [
+    0.943,
+    1.0
+   ]
+  },
+  "False alarms on clean answers": {
+   "hits": 0,
+   "total": 64,
+   "rate": 0.0,
+   "ci95": [
+    0.0,
+    0.057
+   ]
+  },
+  "Hallucination detection": {
+   "hits": 23,
+   "total": 24,
+   "rate": 0.958,
+   "ci95": [
+    0.798,
+    0.993
+   ]
+  },
+  "Grounding verification accuracy": {
+   "hits": 82,
+   "total": 84,
+   "rate": 0.976,
+   "ci95": [
+    0.917,
+    0.993
+   ]
+  },
+  "Prompt-injection detection": {
+   "hits": 15,
+   "total": 16,
+   "rate": 0.938,
+   "ci95": [
+    0.717,
+    0.989
+   ]
+  },
+  "False alarms on answers that warn about a lure": {
+   "hits": 0,
+   "total": 10,
+   "rate": 0.0,
+   "ci95": [
+    0.0,
+    0.278
+   ]
+  },
+  "Faults caught by code checks alone, no LLM": {
+   "hits": 38,
+   "total": 64,
+   "rate": 0.594,
+   "ci95": [
+    0.471,
+    0.705
+   ]
+  },
+  "items": 128,
+  "tuned": true,
+  "cost_usd": 0.12798
+ },
+ "no_kb": {
+  "Precision": {
+   "hits": 4,
+   "total": 11,
+   "rate": 0.364,
+   "ci95": [
+    0.152,
+    0.646
+   ]
+  },
+  "Recall": {
+   "hits": 4,
+   "total": 11,
+   "rate": 0.364,
+   "ci95": [
+    0.152,
+    0.646
+   ]
+  },
+  "False-positive rate": {
+   "hits": 7,
+   "total": 101,
+   "rate": 0.069,
+   "ci95": [
+    0.034,
+    0.136
+   ]
+  }
+ }
+}

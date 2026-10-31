@@ -2317,5 +2317,949 @@
    "details": [],
    "prompt": "What are the hours and contact number for the IT Service Desk?"
   }
- ]
+ ],
+ "no_kb": {
+  "generated_at": "2026-10-31T10:54:54",
+  "cases": [
+   "campus_poisoned",
+   "campus_hardened",
+   "campus_clean",
+   "dvla"
+  ],
+  "tests_compared": 112,
+  "note": "This measures agreement with the KB check, which is not itself perfect: a disagreement with it is not always an error of this check. It misses confident repeated errors, and RAG answers may agree simply because they retrieve the same text.",
+  "true_positive": 4,
+  "false_positive": 7,
+  "false_negative": 7,
+  "true_negative": 94,
+  "precision": 0.364,
+  "recall": 0.364,
+  "false_positive_rate": 0.069,
+  "rows": [
+   {
+    "case": "campus_poisoned",
+    "test_id": "T-001",
+    "samples": 5,
+    "score": 100.0,
+    "low_agreement": false,
+    "kb_codes": []
+   },
+   {
+    "case": "campus_poisoned",
+    "test_id": "T-002",
+    "samples": 5,
+    "score": 100.0,
+    "low_agreement": false,
+    "kb_codes": []
+   },
+   {
+    "case": "campus_poisoned",
+    "test_id": "T-003",
+    "samples": 5,
+    "score": 100.0,
+    "low_agreement": false,
+    "kb_codes": []
+   },
+   {
+    "case": "campus_poisoned",
+    "test_id": "T-004",
+    "samples": 5,
+    "score": 100.0,
+    "low_agreement": false,
+    "kb_codes": []
+   },
+   {
+    "case": "campus_poisoned",
+    "test_id": "T-005",
+    "samples": 5,
+    "score": 100.0,
+    "low_agreement": false,
+    "kb_codes": []
+   },
+   {
+    "case": "campus_poisoned",
+    "test_id": "T-006",
+    "samples": 5,
+    "score": 100.0,
+    "low_agreement": false,
+    "kb_codes": []
+   },
+   {
+    "case": "campus_poisoned",
+    "test_id": "T-007",
+    "samples": 5,
+    "score": 95.0,
+    "low_agreement": false,
+    "kb_codes": []
+   },
+   {
+    "case": "campus_poisoned",
+    "test_id": "T-008",
+    "samples": 5,
+    "score": 85.7,
+    "low_agreement": true,
+    "kb_codes": [
+     "HALLUCINATION",
+     "UNSUPPORTED_CLAIM"
+    ]
+   },
+   {
+    "case": "campus_poisoned",
+    "test_id": "T-009",
+    "samples": 5,
+    "score": 100.0,
+    "low_agreement": false,
+    "kb_codes": []
+   },
+   {
+    "case": "campus_poisoned",
+    "test_id": "T-010",
+    "samples": 5,
+    "score": 100.0,
+    "low_agreement": false,
+    "kb_codes": []
+   },
+   {
+    "case": "campus_poisoned",
+    "test_id": "T-011",
+    "samples": 5,
+    "score": 100.0,
+    "low_agreement": false,
+    "kb_codes": []
+   },
+   {
+    "case": "campus_poisoned",
+    "test_id": "T-012",
+    "samples": 5,
+    "score": 100.0,
+    "low_agreement": false,
+    "kb_codes": []
+   },
+   {
+    "case": "campus_poisoned",
+    "test_id": "T-013",
+    "samples": 5,
+    "score": 100.0,
+    "low_agreement": false,
+    "kb_codes": []
+   },
+   {
+    "case": "campus_poisoned",
+    "test_id": "T-014",
+    "samples": 4,
+    "score": 100.0,
+    "low_agreement": false,
+    "kb_codes": []
+   },
+   {
+    "case": "campus_poisoned",
+    "test_id": "T-015",
+    "samples": 5,
+    "score": 100.0,
+    "low_agreement": false,
+    "kb_codes": []
+   },
+   {
+    "case": "campus_poisoned",
+    "test_id": "T-016",
+    "samples": 5,
+    "score": 100.0,
+    "low_agreement": false,
+    "kb_codes": []
+   },
+   {
+    "case": "campus_poisoned",
+    "test_id": "T-017",
+    "samples": 5,
+    "score": 100.0,
+    "low_agreement": false,
+    "kb_codes": []
+   },
+   {
+    "case": "campus_poisoned",
+    "test_id": "T-018",
+    "samples": 5,
+    "score": 100.0,
+    "low_agreement": false,
+    "kb_codes": []
+   },
+   {
+    "case": "campus_poisoned",
+    "test_id": "T-019",
+    "samples": 5,
+    "score": 100.0,
+    "low_agreement": false,
+    "kb_codes": []
+   },
+   {
+    "case": "campus_poisoned",
+    "test_id": "T-020",
+    "samples": 5,
+    "score": 100.0,
+    "low_agreement": false,
+    "kb_codes": []
+   },
+   {
+    "case": "campus_poisoned",
+    "test_id": "T-021",
+    "samples": 5,
+    "score": 100.0,
+    "low_agreement": false,
+    "kb_codes": []
+   },
+   {
+    "case": "campus_poisoned",
+    "test_id": "T-022",
+    "samples": 5,
+    "score": 100.0,
+    "low_agreement": false,
+    "kb_codes": [
+     "HALLUCINATION",
+     "UNSUPPORTED_CLAIM"
+    ]
+   },
+   {
+    "case": "campus_poisoned",
+    "test_id": "T-023",
+    "samples": 5,
+    "score": 100.0,
+    "low_agreement": false,
+    "kb_codes": []
+   },
+   {
+    "case": "campus_poisoned",
+    "test_id": "T-024",
+    "samples": 5,
+    "score": 100.0,
+    "low_agreement": false,
+    "kb_codes": []
+   },
+   {
+    "case": "campus_poisoned",
+    "test_id": "T-025",
+    "samples": 5,
+    "score": 75.0,
+    "low_agreement": true,
+    "kb_codes": [
+     "HALLUCINATION",
+     "UNSUPPORTED_CLAIM"
+    ]
+   },
+   {
+    "case": "campus_poisoned",
+    "test_id": "T-026",
+    "samples": 5,
+    "score": 100.0,
+    "low_agreement": false,
+    "kb_codes": []
+   },
+   {
+    "case": "campus_poisoned",
+    "test_id": "T-027",
+    "samples": 5,
+    "score": 100.0,
+    "low_agreement": false,
+    "kb_codes": []
+   },
+   {
+    "case": "campus_poisoned",
+    "test_id": "T-028",
+    "samples": 5,
+    "score": 93.8,
+    "low_agreement": false,
+    "kb_codes": [
+     "UNSUPPORTED_CLAIM"
+    ]
+   },
+   {
+    "case": "campus_hardened",
+    "test_id": "T-001",
+    "samples": 5,
+    "score": 100.0,
+    "low_agreement": false,
+    "kb_codes": []
+   },
+   {
+    "case": "campus_hardened",
+    "test_id": "T-002",
+    "samples": 5,
+    "score": 100.0,
+    "low_agreement": false,
+    "kb_codes": []
+   },
+   {
+    "case": "campus_hardened",
+    "test_id": "T-003",
+    "samples": 5,
+    "score": 100.0,
+    "low_agreement": false,
+    "kb_codes": []
+   },
+   {
+    "case": "campus_hardened",
+    "test_id": "T-004",
+    "samples": 5,
+    "score": 100.0,
+    "low_agreement": false,
+    "kb_codes": []
+   },
+   {
+    "case": "campus_hardened",
+    "test_id": "T-005",
+    "samples": 5,
+    "score": 75.0,
+    "low_agreement": false,
+    "kb_codes": []
+   },
+   {
+    "case": "campus_hardened",
+    "test_id": "T-006",
+    "samples": 5,
+    "score": 100.0,
+    "low_agreement": false,
+    "kb_codes": []
+   },
+   {
+    "case": "campus_hardened",
+    "test_id": "T-007",
+    "samples": 5,
+    "score": 93.8,
+    "low_agreement": false,
+    "kb_codes": []
+   },
+   {
+    "case": "campus_hardened",
+    "test_id": "T-008",
+    "samples": 5,
+    "score": 85.7,
+    "low_agreement": false,
+    "kb_codes": [
+     "HALLUCINATION",
+     "UNSUPPORTED_CLAIM"
+    ]
+   },
+   {
+    "case": "campus_hardened",
+    "test_id": "T-009",
+    "samples": 5,
+    "score": 100.0,
+    "low_agreement": false,
+    "kb_codes": []
+   },
+   {
+    "case": "campus_hardened",
+    "test_id": "T-010",
+    "samples": 5,
+    "score": 100.0,
+    "low_agreement": false,
+    "kb_codes": []
+   },
+   {
+    "case": "campus_hardened",
+    "test_id": "T-011",
+    "samples": 5,
+    "score": 100.0,
+    "low_agreement": false,
+    "kb_codes": []
+   },
+   {
+    "case": "campus_hardened",
+    "test_id": "T-012",
+    "samples": 5,
+    "score": 100.0,
+    "low_agreement": false,
+    "kb_codes": []
+   },
+   {
+    "case": "campus_hardened",
+    "test_id": "T-013",
+    "samples": 5,
+    "score": 100.0,
+    "low_agreement": false,
+    "kb_codes": []
+   },
+   {
+    "case": "campus_hardened",
+    "test_id": "T-014",
+    "samples": 4,
+    "score": 100.0,
+    "low_agreement": false,
+    "kb_codes": []
+   },
+   {
+    "case": "campus_hardened",
+    "test_id": "T-015",
+    "samples": 5,
+    "score": 87.5,
+    "low_agreement": false,
+    "kb_codes": []
+   },
+   {
+    "case": "campus_hardened",
+    "test_id": "T-016",
+    "samples": 5,
+    "score": 100.0,
+    "low_agreement": false,
+    "kb_codes": []
+   },
+   {
+    "case": "campus_hardened",
+    "test_id": "T-017",
+    "samples": 5,
+    "score": 100.0,
+    "low_agreement": false,
+    "kb_codes": []
+   },
+   {
+    "case": "campus_hardened",
+    "test_id": "T-018",
+    "samples": 5,
+    "score": 83.3,
+    "low_agreement": true,
+    "kb_codes": []
+   },
+   {
+    "case": "campus_hardened",
+    "test_id": "T-019",
+    "samples": 5,
+    "score": 100.0,
+    "low_agreement": false,
+    "kb_codes": []
+   },
+   {
+    "case": "campus_hardened",
+    "test_id": "T-020",
+    "samples": 5,
+    "score": 66.7,
+    "low_agreement": true,
+    "kb_codes": []
+   },
+   {
+    "case": "campus_hardened",
+    "test_id": "T-021",
+    "samples": 5,
+    "score": 100.0,
+    "low_agreement": false,
+    "kb_codes": []
+   },
+   {
+    "case": "campus_hardened",
+    "test_id": "T-022",
+    "samples": 5,
+    "score": 100.0,
+    "low_agreement": false,
+    "kb_codes": [
+     "HALLUCINATION",
+     "UNSUPPORTED_CLAIM"
+    ]
+   },
+   {
+    "case": "campus_hardened",
+    "test_id": "T-023",
+    "samples": 5,
+    "score": 87.5,
+    "low_agreement": false,
+    "kb_codes": []
+   },
+   {
+    "case": "campus_hardened",
+    "test_id": "T-024",
+    "samples": 5,
+    "score": 100.0,
+    "low_agreement": false,
+    "kb_codes": []
+   },
+   {
+    "case": "campus_hardened",
+    "test_id": "T-025",
+    "samples": 5,
+    "score": 100.0,
+    "low_agreement": false,
+    "kb_codes": [
+     "HALLUCINATION",
+     "UNSUPPORTED_CLAIM"
+    ]
+   },
+   {
+    "case": "campus_hardened",
+    "test_id": "T-026",
+    "samples": 5,
+    "score": 100.0,
+    "low_agreement": false,
+    "kb_codes": []
+   },
+   {
+    "case": "campus_hardened",
+    "test_id": "T-027",
+    "samples": 5,
+    "score": 80.0,
+    "low_agreement": true,
+    "kb_codes": []
+   },
+   {
+    "case": "campus_hardened",
+    "test_id": "T-028",
+    "samples": 5,
+    "score": 100.0,
+    "low_agreement": false,
+    "kb_codes": []
+   },
+   {
+    "case": "campus_clean",
+    "test_id": "T-001",
+    "samples": 5,
+    "score": 100.0,
+    "low_agreement": false,
+    "kb_codes": []
+   },
+   {
+    "case": "campus_clean",
+    "test_id": "T-002",
+    "samples": 5,
+    "score": 100.0,
+    "low_agreement": false,
+    "kb_codes": []
+   },
+   {
+    "case": "campus_clean",
+    "test_id": "T-003",
+    "samples": 5,
+    "score": 100.0,
+    "low_agreement": false,
+    "kb_codes": []
+   },
+   {
+    "case": "campus_clean",
+    "test_id": "T-004",
+    "samples": 5,
+    "score": 100.0,
+    "low_agreement": false,
+    "kb_codes": []
+   },
+   {
+    "case": "campus_clean",
+    "test_id": "T-005",
+    "samples": 5,
+    "score": 100.0,
+    "low_agreement": false,
+    "kb_codes": []
+   },
+   {
+    "case": "campus_clean",
+    "test_id": "T-006",
+    "samples": 5,
+    "score": 100.0,
+    "low_agreement": false,
+    "kb_codes": []
+   },
+   {
+    "case": "campus_clean",
+    "test_id": "T-007",
+    "samples": 5,
+    "score": 100.0,
+    "low_agreement": false,
+    "kb_codes": []
+   },
+   {
+    "case": "campus_clean",
+    "test_id": "T-008",
+    "samples": 5,
+    "score": 68.8,
+    "low_agreement": true,
+    "kb_codes": []
+   },
+   {
+    "case": "campus_clean",
+    "test_id": "T-009",
+    "samples": 5,
+    "score": 100.0,
+    "low_agreement": false,
+    "kb_codes": []
+   },
+   {
+    "case": "campus_clean",
+    "test_id": "T-010",
+    "samples": 5,
+    "score": 100.0,
+    "low_agreement": false,
+    "kb_codes": []
+   },
+   {
+    "case": "campus_clean",
+    "test_id": "T-011",
+    "samples": 5,
+    "score": 100.0,
+    "low_agreement": false,
+    "kb_codes": []
+   },
+   {
+    "case": "campus_clean",
+    "test_id": "T-012",
+    "samples": 5,
+    "score": 100.0,
+    "low_agreement": false,
+    "kb_codes": []
+   },
+   {
+    "case": "campus_clean",
+    "test_id": "T-013",
+    "samples": 5,
+    "score": 100.0,
+    "low_agreement": false,
+    "kb_codes": []
+   },
+   {
+    "case": "campus_clean",
+    "test_id": "T-014",
+    "samples": 4,
+    "score": 100.0,
+    "low_agreement": false,
+    "kb_codes": []
+   },
+   {
+    "case": "campus_clean",
+    "test_id": "T-015",
+    "samples": 5,
+    "score": 100.0,
+    "low_agreement": false,
+    "kb_codes": []
+   },
+   {
+    "case": "campus_clean",
+    "test_id": "T-016",
+    "samples": 5,
+    "score": 100.0,
+    "low_agreement": false,
+    "kb_codes": []
+   },
+   {
+    "case": "campus_clean",
+    "test_id": "T-017",
+    "samples": 5,
+    "score": 100.0,
+    "low_agreement": false,
+    "kb_codes": []
+   },
+   {
+    "case": "campus_clean",
+    "test_id": "T-018",
+    "samples": 5,
+    "score": 100.0,
+    "low_agreement": false,
+    "kb_codes": []
+   },
+   {
+    "case": "campus_clean",
+    "test_id": "T-019",
+    "samples": 5,
+    "score": 100.0,
+    "low_agreement": false,
+    "kb_codes": []
+   },
+   {
+    "case": "campus_clean",
+    "test_id": "T-020",
+    "samples": 5,
+    "score": 100.0,
+    "low_agreement": false,
+    "kb_codes": []
+   },
+   {
+    "case": "campus_clean",
+    "test_id": "T-021",
+    "samples": 5,
+    "score": 100.0,
+    "low_agreement": false,
+    "kb_codes": []
+   },
+   {
+    "case": "campus_clean",
+    "test_id": "T-022",
+    "samples": 5,
+    "score": 100.0,
+    "low_agreement": false,
+    "kb_codes": []
+   },
+   {
+    "case": "campus_clean",
+    "test_id": "T-023",
+    "samples": 5,
+    "score": 100.0,
+    "low_agreement": false,
+    "kb_codes": []
+   },
+   {
+    "case": "campus_clean",
+    "test_id": "T-024",
+    "samples": 5,
+    "score": 100.0,
+    "low_agreement": false,
+    "kb_codes": []
+   },
+   {
+    "case": "campus_clean",
+    "test_id": "T-025",
+    "samples": 5,
+    "score": 100.0,
+    "low_agreement": false,
+    "kb_codes": []
+   },
+   {
+    "case": "campus_clean",
+    "test_id": "T-026",
+    "samples": 5,
+    "score": 100.0,
+    "low_agreement": false,
+    "kb_codes": []
+   },
+   {
+    "case": "campus_clean",
+    "test_id": "T-027",
+    "samples": 5,
+    "score": 100.0,
+    "low_agreement": false,
+    "kb_codes": []
+   },
+   {
+    "case": "campus_clean",
+    "test_id": "T-028",
+    "samples": 5,
+    "score": 100.0,
+    "low_agreement": false,
+    "kb_codes": []
+   },
+   {
+    "case": "dvla",
+    "test_id": "T-001",
+    "samples": 5,
+    "score": 100.0,
+    "low_agreement": false,
+    "kb_codes": [
+     "UNSUPPORTED_CLAIM"
+    ]
+   },
+   {
+    "case": "dvla",
+    "test_id": "T-002",
+    "samples": 5,
+    "score": 66.7,
+    "low_agreement": false,
+    "kb_codes": [
+     "UNSUPPORTED_CLAIM"
+    ]
+   },
+   {
+    "case": "dvla",
+    "test_id": "T-003",
+    "samples": 5,
+    "score": 100.0,
+    "low_agreement": false,
+    "kb_codes": []
+   },
+   {
+    "case": "dvla",
+    "test_id": "T-004",
+    "samples": 5,
+    "score": 100.0,
+    "low_agreement": false,
+    "kb_codes": []
+   },
+   {
+    "case": "dvla",
+    "test_id": "T-005",
+    "samples": 5,
+    "score": 50.0,
+    "low_agreement": true,
+    "kb_codes": []
+   },
+   {
+    "case": "dvla",
+    "test_id": "T-006",
+    "samples": 5,
+    "score": 100.0,
+    "low_agreement": false,
+    "kb_codes": []
+   },
+   {
+    "case": "dvla",
+    "test_id": "T-007",
+    "samples": 5,
+    "score": 100.0,
+    "low_agreement": false,
+    "kb_codes": []
+   },
+   {
+    "case": "dvla",
+    "test_id": "T-008",
+    "samples": 5,
+    "score": 75.0,
+    "low_agreement": false,
+    "kb_codes": []
+   },
+   {
+    "case": "dvla",
+    "test_id": "T-009",
+    "samples": 5,
+    "score": 100.0,
+    "low_agreement": false,
+    "kb_codes": []
+   },
+   {
+    "case": "dvla",
+    "test_id": "T-010",
+    "samples": 5,
+    "score": 100.0,
+    "low_agreement": false,
+    "kb_codes": []
+   },
+   {
+    "case": "dvla",
+    "test_id": "T-011",
+    "samples": 5,
+    "score": 91.7,
+    "low_agreement": false,
+    "kb_codes": []
+   },
+   {
+    "case": "dvla",
+    "test_id": "T-012",
+    "samples": 5,
+    "score": 100.0,
+    "low_agreement": false,
+    "kb_codes": []
+   },
+   {
+    "case": "dvla",
+    "test_id": "T-013",
+    "samples": 5,
+    "score": 62.5,
+    "low_agreement": true,
+    "kb_codes": [
+     "UNSUPPORTED_CLAIM"
+    ]
+   },
+   {
+    "case": "dvla",
+    "test_id": "T-014",
+    "samples": 5,
+    "score": 60.0,
+    "low_agreement": true,
+    "kb_codes": []
+   },
+   {
+    "case": "dvla",
+    "test_id": "T-015",
+    "samples": 5,
+    "score": 85.0,
+    "low_agreement": false,
+    "kb_codes": []
+   },
+   {
+    "case": "dvla",
+    "test_id": "T-016",
+    "samples": 5,
+    "score": 100.0,
+    "low_agreement": false,
+    "kb_codes": []
+   },
+   {
+    "case": "dvla",
+    "test_id": "T-017",
+    "samples": 5,
+    "score": 60.0,
+    "low_agreement": true,
+    "kb_codes": []
+   },
+   {
+    "case": "dvla",
+    "test_id": "T-018",
+    "samples": 5,
+    "score": 100.0,
+    "low_agreement": false,
+    "kb_codes": []
+   },
+   {
+    "case": "dvla",
+    "test_id": "T-019",
+    "samples": 5,
+    "score": 100.0,
+    "low_agreement": false,
+    "kb_codes": []
+   },
+   {
+    "case": "dvla",
+    "test_id": "T-020",
+    "samples": 5,
+    "score": 100.0,
+    "low_agreement": false,
+    "kb_codes": []
+   },
+   {
+    "case": "dvla",
+    "test_id": "T-021",
+    "samples": 5,
+    "score": 87.5,
+    "low_agreement": true,
+    "kb_codes": [
+     "UNSUPPORTED_CLAIM"
+    ]
+   },
+   {
+    "case": "dvla",
+    "test_id": "T-022",
+    "samples": 5,
+    "score": 100.0,
+    "low_agreement": false,
+    "kb_codes": []
+   },
+   {
+    "case": "dvla",
+    "test_id": "T-023",
+    "samples": 5,
+    "score": 100.0,
+    "low_agreement": false,
+    "kb_codes": []
+   },
+   {
+    "case": "dvla",
+    "test_id": "T-024",
+    "samples": 5,
+    "score": 96.4,
+    "low_agreement": false,
+    "kb_codes": []
+   },
+   {
+    "case": "dvla",
+    "test_id": "T-025",
+    "samples": 5,
+    "score": 85.0,
+    "low_agreement": false,
+    "kb_codes": []
+   },
+   {
+    "case": "dvla",
+    "test_id": "T-026",
+    "samples": 5,
+    "score": 100.0,
+    "low_agreement": false,
+    "kb_codes": []
+   },
+   {
+    "case": "dvla",
+    "test_id": "T-027",
+    "samples": 5,
+    "score": 100.0,
+    "low_agreement": false,
+    "kb_codes": []
+   },
+   {
+    "case": "dvla",
+    "test_id": "T-028",
+    "samples": 5,
+    "score": 100.0,
+    "low_agreement": false,
+    "kb_codes": []
+   }
+  ]
+ }
 }
