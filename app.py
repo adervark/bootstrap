@@ -357,5 +357,13 @@ def get_audit(case: str):
 
 @app.get("/api/calibration")
 def get_calibration():
-    path = Path("data/calibration.json")
-    return json.loads(path.read_text(encoding="utf-8")) if path.exists() else {}
+    """The held-out set when there is one (never tuned on), else the tuning set, plus the hand labels."""
+    load = lambda name: json.loads(Path(name).read_text(encoding="utf-8")) if Path(name).exists() else {}
+    tuning, held = load("data/calibration.json"), load("data/calibration_heldout.json")
+    if not (held or tuning):
+        return {}
+    data = (held | {"set": "held-out"}) if held else (tuning | {"set": "tuning"})
+    data.setdefault("no_kb", tuning.get("no_kb"))
+    if Path("data/labels/score.json").exists():
+        data["real_labels"] = load("data/labels/score.json")
+    return data
