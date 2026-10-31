@@ -57,14 +57,16 @@ def check(case_dir, timeline=False):
     samples = sorted((CONTRACTS / "sample").glob("*.csv"))
     if not samples:
         problems.append("contracts/sample/ has no CSVs yet")
+    sys.path.insert(0, str(ROOT))
+    import store
     for sample in samples:
         target = case_dir / sample.name
-        if not target.exists():
-            problems.append(f"missing {target}")
-        elif header(target) != header(sample):
-            problems.append(f"{target} columns {header(target)}, contract says {header(sample)}")
+        if target.exists():
+            if header(target) != header(sample):
+                problems.append(f"{target} columns {header(target)}, contract says {header(sample)}")
+        elif not store.read_csv(target):  # the database is the record (D20); its columns are the contract's
+            problems.append(f"no {sample.stem} rows for {case_dir}, in its folder or in data/gate.db")
     if timeline:
-        sys.path.insert(0, str(ROOT))
         import analyze
         want = json.loads((CONTRACTS / "timeline.json").read_text(encoding="utf-8"))
         problem = shape_problem(analyze.timeline(case_dir), want, "timeline")

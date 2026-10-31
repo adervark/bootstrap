@@ -67,7 +67,7 @@ bash targets/start.sh                     # the four target apps, 127.0.0.1 only
 set -a; . ./.env; set +a
 python3 generate.py data/sessions/campus_poisoned     # or any case
 python3 execute.py  data/sessions/campus_poisoned
-python3 analyze.py  data/sessions/campus_poisoned     # stores the analysis in data/gate.db, exports report.md and results.json
+python3 analyze.py  data/sessions/campus_poisoned     # stores the analysis in data/gate.db, writes report.md
 python3 generate.py data/sessions/campus_poisoned --save-regressions
 python3 calibrate.py --held-out                       # our own accuracy, on fresh seeded faults
 python3 metrics.py                                    # METRICS.md
@@ -77,9 +77,9 @@ dbeaver-ce   # or: sqlite3 data/gate.db               # the data; queries.sql ho
 ```
 
 Every script reads and writes `data/gate.db` through `store.py` (standard-library `sqlite3`, `?` parameters
-only). The files in each case folder are exports, rewritten on every write, so `contracts/check.py` and git
-still see the data; a fresh clone rebuilds the database from them on first use. To put a case back after a
-rehearsal: `git restore data/sessions/<case> && python3 store.py --reset data/sessions/<case>`.
+only). The database is the only record and is committed to git (`DECISIONS.md` D20): a case folder holds
+just its manifest (`target.json`), its planted truth (`answer.txt`) and a readable `report.md`. To put
+everything back after a rehearsal: `git restore data/gate.db`.
 
 The page shows the saved reports instantly, so it works if the LLM API is down. The
 jury scenario box turns free text into a new risk and new tests, runs them and

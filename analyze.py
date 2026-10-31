@@ -1430,5 +1430,5 @@ def approve(case_dir, name, reason, action):
 if __name__ == "__main__":
     for folder in sys.argv[1:]:
         print(run(folder))
-        print(f"stored the analysis in {store.DB_PATH.name}, exported {Path(folder, 'report.md')} and results.json; LLM usage {llm.usage()}")
+        print(f"stored the analysis in {store.DB_PATH.name}, wrote {Path(folder, 'report.md')}; LLM usage {llm.usage()}")
         print("audit chain:", audit.verify(folder))

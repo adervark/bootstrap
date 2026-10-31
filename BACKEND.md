@@ -43,8 +43,8 @@ called with `urllib`. The four apps under test are open-source projects we clone
 
 - Open it in DBeaver (connection "LLM Release Gate (gate.db)") or `sqlite3 data/gate.db`;
   `queries.sql` holds the six questions worth asking, such as attacks that worked per app.
-- Each case folder keeps CSV/JSON/Markdown exports, rewritten on every write. They exist for
-  `contracts/check.py`, git and people; nothing reads them back except a first import.
+- The database is the only record and is committed to git (D20). A case folder keeps only
+  `target.json`, `answer.txt` and a readable `report.md`; no CSV or JSON is written.
 
 ## The files
 
@@ -58,7 +58,7 @@ called with `urllib`. The four apps under test are open-source projects we clone
 - Creates the tables; a connection per call, WAL mode, so the page reads while a run writes.
 - `read_csv` / `write_csv` route a case's risks, tests and runs to the database; other CSVs stay files.
 - `save_analysis`, `results`, `update_results`, `history` for analyses; `append_audit` for the log.
-- `python3 store.py --reset <case>` drops a case so it re-imports from its (restored) files.
+- `git restore data/gate.db` puts every case back as committed.
 
 **generate.py**: risks to tests.
 - The LLM writes tests from each risk, the app's description and its documents.

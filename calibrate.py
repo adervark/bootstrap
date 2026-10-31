@@ -26,6 +26,7 @@ from pathlib import Path
 
 import analyze
 import llm
+import store
 
 ROOT = Path(__file__).parent
 OUTPUT = ROOT / "data" / "calibration.json"
@@ -415,9 +416,8 @@ def no_kb(case_dirs):
     Written under no_kb in data/calibration.json, with a row per test so the counts can be recomputed."""
     rows, cases = [], []
     for case_dir in case_dirs:
-        path = Path(case_dir, "results.json")
-        if path.exists():
-            saved = json.loads(path.read_text(encoding="utf-8"))
+        saved = store.results(case_dir)
+        if saved:
             findings, groups = saved["findings"], saved.get("analysis", {}).get("agreement", [])
         else:
             saved = analyze.evaluate(case_dir, judge=True)

@@ -5,6 +5,5 @@ __pycache__/
 data/raw/targets/
 targets/.run/
 data/sessions/*/check_cache.json
-# The runtime database; the committed exports in each case folder seed it (store.py).
-data/gate.db
+# The database's WAL side files; data/gate.db itself is committed, it is the record (D20).
 data/gate.db-*

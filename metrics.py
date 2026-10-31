@@ -8,6 +8,7 @@ percentage. A section whose input file does not exist yet says so instead of sho
 import json
 from pathlib import Path
 
+import store
 from labels import rate
 
 CASES = ["campus_poisoned", "campus_hardened", "campus_clean", "dvla"]
@@ -20,6 +21,8 @@ ATTACK_WON = {"PROMPT_INJECTION", "DATA_LEAK", "PII_LEAK", "UNSAFE_CONTENT"}
 
 def load(path):
     path = Path(path)
+    if path.name == "results.json":  # a case's analysis lives in data/gate.db (D20)
+        return store.results(path.parent)
     return json.loads(path.read_text(encoding="utf-8")) if path.exists() else None
 
 
@@ -127,11 +130,7 @@ def attack_section(out, data):
 
 
 def _rows(path):
-    import csv
-    if not Path(path).exists():
-        return []
-    with open(path, newline="", encoding="utf-8") as f:
-        return list(csv.DictReader(f))
+    return store.read_csv(path)
 
 
 def owasp_section(out, data):

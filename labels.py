@@ -13,6 +13,8 @@ import random
 import sys
 from pathlib import Path
 
+import store
+
 CASES = ["campus_poisoned", "campus_hardened", "campus_clean", "dvla"]
 OUT = Path("data/labels")
 COLUMNS = ["item", "kind", "case", "test_id", "run_id", "code", "check", "evidence", "prompt", "answer",
@@ -35,15 +37,14 @@ def rate(hits, total):
 
 
 def read(path):
-    with open(path, newline="", encoding="utf-8") as f:
-        return list(csv.DictReader(f))
+    return store.read_csv(path)
 
 
 def sample():
     findings, clean = [], []
     for case in CASES:
         folder = Path("data/sessions", case)
-        results = json.loads((folder / "results.json").read_text(encoding="utf-8"))
+        results = store.results(folder)
         runs = {row["run_id"]: row for row in read(folder / "runs.csv")}
         tests = {row["test_id"]: row for row in read(folder / "tests.csv")}
         flagged_runs = {f["run_id"] for f in results["findings"]}

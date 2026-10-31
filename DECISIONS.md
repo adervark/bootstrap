@@ -260,3 +260,21 @@ to use if a juror asks. Newest last.
 - The regression page charts attacks that worked and the overall score per version, with
   the release limit as an amber line. The audit page shows the database: row counts,
   this case's analyses, and failure codes across the apps.
+
+## D20. The database is the only record (user)
+
+- User: "remove all the CSV and JSON files [that] are not needed, shift to DB. DB is primary now."
+- `store.py` no longer writes a case's `risks.csv`, `tests.csv`, `runs.csv`, `results.json`
+  or `audit.jsonl`; those exports are deleted. `report.md` is still written, for people.
+- `data/gate.db` is committed to git, so a clone and a rehearsal reset (`git restore
+  data/gate.db`) still work. Before the exports were deleted, the database matched them row
+  for row in all four cases (risks, tests, runs, results, audit chain).
+- The last direct file readers (`metrics.py`, `deck.py`, `labels.py`, `calibrate.py`,
+  `contracts/check.py`) now read through `store.py`.
+- Kept as files, because the database does not hold them: `target.json` (each app's
+  manifest, an input), `answer.txt` (the planted truth, never read by the framework),
+  `contracts/sample/` (the contract; the tables' columns are read from it), and the
+  deliverables in `data/suite/`, `data/regression/`, `data/monitor/`, `data/labels/` and the
+  calibration and metrics JSON.
+- If asked: "One SQLite file holds every risk, test, answer, finding and audit entry, with
+  every analysis kept as history. The files left are inputs and readable outputs."

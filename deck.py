@@ -16,6 +16,8 @@ from pptx.dml.color import RGBColor
 from pptx.enum.text import MSO_ANCHOR, MSO_AUTO_SIZE, PP_ALIGN
 from pptx.util import Inches, Pt
 
+import store
+
 OUT = Path("deck")
 CASES = ["campus_poisoned", "campus_hardened", "campus_clean", "dvla"]
 # The page's colours (static/index.html): amber marks where to look, red only a failure.
@@ -28,6 +30,8 @@ MARGIN = 0.05  # text box inset, inches, the same in the deck and the preview
 
 
 def load(path):
+    if Path(path).name == "results.json":  # a case's analysis lives in data/gate.db (D20)
+        return store.results(Path(path).parent)
     return json.loads(Path(path).read_text(encoding="utf-8"))
 
 
@@ -207,7 +211,7 @@ def build():
     score = {c: r["scorecard"]["overall"] for c, r in results.items()}
     dims = {c: {x["name"]: x["score"] for x in r["scorecard"]["dimensions"]} for c, r in results.items()}
     verdict = {c: r["decision"]["final_verdict"] for c, r in results.items()}
-    suite = list(csv.DictReader(open("data/sessions/campus_poisoned/tests.csv", encoding="utf-8")))
+    suite = store.read_csv("data/sessions/campus_poisoned/tests.csv")
     origin = {o: sum(t["origin"] == o for t in suite) for o in ("generated", "mutated", "rephrase")}
     risks = results["campus_poisoned"]["scorecard"]["coverage"]["risks_total"]
     regressions = {f: regression_count(f) for f in ("campus", "dvla")}
@@ -216,7 +220,7 @@ def build():
     latency = sorted(r["scorecard"]["cost"]["latency_ms_p50"] for r in results.values())
     bias_tests = bias_found = 0
     for case in CASES:
-        bias_risks = {row["risk_id"] for row in csv.DictReader(open(f"data/sessions/{case}/risks.csv", encoding="utf-8"))
+        bias_risks = {row["risk_id"] for row in store.read_csv(f"data/sessions/{case}/risks.csv")
                       if row["scenario"].lower().startswith("bias")}
         bias_tests += sum(t["risk_id"] in bias_risks for t in results[case]["tests"])
         bias_found += codes[case].count("BIAS")

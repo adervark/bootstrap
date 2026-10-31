@@ -9,10 +9,9 @@ Tables, each row tagged with its case (the case folder, relative to the repo):
   audit                the hash-chained log (audit.py); appends are serialised so the chain cannot fork
   check_cache          the reused checks of unchanged answers (D16)
 
-The scripts read only from here. The files in a case folder (risks.csv, tests.csv, runs.csv,
-results.json, report.md, audit.jsonl) are exports, rewritten on every write, so
-contracts/check.py, git and a person reading a file still see the data. A case folder seen
-for the first time is imported from its files once.
+The database is the only record, and it is committed to git (D20). Nothing writes a case's
+CSV or JSON any more; report.md is still written, for a person to read. A case folder seen
+for the first time is imported once from whatever files it has (contracts/sample does).
 
 Standard library only (sqlite3). Every value goes in through a ? parameter.
 """
@@ -129,13 +128,6 @@ def _table(path):
     return name[:-4] if name.endswith(".csv") and name[:-4] in TABLES else None
 
 
-def _export(db, case, folder, name):
-    with open(Path(folder, f"{name}.csv"), "w", newline="", encoding="utf-8") as f:
-        writer = csv.DictWriter(f, COLUMNS[name])
-        writer.writeheader()
-        writer.writerows(_rows(db, case, name))
-
-
 def _rows(db, case, name):
     cols = COLUMNS[name]
     return [dict(zip(cols, row)) for row in
@@ -152,7 +144,7 @@ def read_csv(path):
 
 
 def write_csv(path, columns, rows):
-    """Replace a case table's rows (then its export); any other CSV is written as a file."""
+    """Replace a case table's rows; any other CSV is written as a file."""
     name = _table(path)
     if not name:
         with open(path, "w", newline="", encoding="utf-8") as f:
@@ -168,22 +160,14 @@ def write_csv(path, columns, rows):
         db.execute(f"DELETE FROM {name} WHERE case_name = ?", (case,))
         _insert(db, case, name, rows)
         db.commit()
-        _export(db, case, folder, name)
 
 
 def add_rows(case_dir, name, rows):
-    """Append rows to a case table, and the same rows to its export."""
+    """Append rows to a case table."""
     with connect() as db:
         case = _ensure(db, case_dir)
         _insert(db, case, name, rows)
         db.commit()
-    path = Path(case_dir, f"{name}.csv")
-    fresh = not path.exists() or not path.stat().st_size
-    with open(path, "a", newline="", encoding="utf-8") as f:
-        writer = csv.DictWriter(f, COLUMNS[name], extrasaction="ignore")
-        if fresh:
-            writer.writeheader()
-        writer.writerows(rows)
 
 
 # ---- analyses and findings
@@ -200,18 +184,12 @@ def _insert_analysis(db, case, results, report, created=None):
     return cursor.lastrowid
 
 
-def _export_results(folder, results, report=None):
-    Path(folder, "results.json").write_text(json.dumps(results, indent=1), encoding="utf-8")
-    if report is not None:
-        Path(folder, "report.md").write_text(report, encoding="utf-8")
-
-
 def save_analysis(case_dir, results, report):
-    """A new analysis: its row, its findings, then the results.json and report.md exports."""
+    """A new analysis: its row and its findings, then report.md for a person to read."""
     with connect() as db:
         number = _insert_analysis(db, _ensure(db, case_dir), results, report)
         db.commit()
-    _export_results(case_dir, results, report)
+    Path(case_dir, "report.md").write_text(report, encoding="utf-8")
     return number
 
 
@@ -243,7 +221,6 @@ def update_results(case_dir, data):
         db.execute("UPDATE analyses SET results = ?, status = ?, final_verdict = ? WHERE id = ?",
                    (json.dumps(data), decision.get("status", ""), decision.get("final_verdict", ""), row["id"]))
         db.commit()
-    _export_results(case_dir, data)
 
 
 def history(case_dir):
@@ -294,8 +271,6 @@ def append_audit(case_dir, build):
         entry = build(last["hash"] if last else None)
         _insert_audit(db, case, entry)
         db.commit()
-    with open(Path(case_dir, "audit.jsonl"), "a", encoding="utf-8") as f:
-        f.write(json.dumps(entry) + "\n")
     return entry
 
 
@@ -316,8 +291,8 @@ def cache_save(case_dir, cache):
 
 
 def forget(case_dir):
-    """Drop a case from the database. Its files stay, so the next access imports them again:
-    after `git restore <case folder>`, this puts the case back as committed."""
+    """Drop a case from the database. The next access imports whatever files its folder has.
+    To put a case back as committed, restore the database instead: `git restore data/gate.db`."""
     case = case_of(case_dir)
     with connect() as db:
         for name in (*TABLES, "audit", "check_cache", "cases"):
