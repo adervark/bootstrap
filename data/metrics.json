@@ -336,6 +336,26 @@
    "items": []
   }
  },
+ "carry_over": {
+  "campus_hardened": {
+   "hits": 24,
+   "total": 59,
+   "rate": 0.407,
+   "ci95": [
+    0.291,
+    0.534
+   ]
+  },
+  "campus_clean": {
+   "hits": 42,
+   "total": 59,
+   "rate": 0.712,
+   "ci95": [
+    0.586,
+    0.812
+   ]
+  }
+ },
  "asr": {
   "campus_poisoned": {
    "hits": 33,

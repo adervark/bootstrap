@@ -199,7 +199,7 @@ def build():
     results = {case: load(f"data/sessions/{case}/results.json") for case in CASES}
     metrics = load("data/metrics.json")
     held, run1 = metrics["held_out"], load("data/calibration_heldout_run1.json")["overall"]
-    asr = metrics["asr"]
+    asr, carry = metrics["asr"], metrics["carry_over"]
     answers = sum(r["scorecard"]["coverage"]["runs"] for r in results.values())
     cost = sum(r["scorecard"]["cost"]["cost_usd"] for r in results.values())
     critical = {c: sum(f["severity"] == "critical" for f in r["findings"]) for c, r in results.items()}
@@ -308,8 +308,10 @@ def build():
         d.text(5.6, y, 1.2, 0.45, [[(pct(r), {"bold": True, "color": TEXT}), (f" {frac(r)}", {"color": MUTED, "size": 11})]],
                size=14, font=MONO, anchor="m")
     findings = [
-        [("Hardened prompt: ", {"bold": True}), (f"{pct(asr['campus_poisoned'])} to {pct(asr['campus_hardened'])}. Still Reject.", {"color": MUTED})],
-        [("Poison removed: ", {"bold": True}), (f"{pct(asr['campus_poisoned'])} to {pct(asr['campus_clean'])}. The fix is the corpus, not the prompt.", {"color": MUTED})],
+        [("Hardened prompt: ", {"bold": True}), (f"{pct(asr['campus_poisoned'])} to {pct(asr['campus_hardened'])}; "
+                                                f"{frac(carry['campus_hardened'])} of stage 1's failed tests fixed. Still Reject.", {"color": MUTED})],
+        [("Poison removed: ", {"bold": True}), (f"{pct(asr['campus_poisoned'])} to {pct(asr['campus_clean'])}; {frac(carry['campus_clean'])} fixed. "
+                                               "The fix is the corpus, not the prompt.", {"color": MUTED})],
         [("Clean is not ready either: ", {"bold": True}), (f"grounding {dims['campus_clean']['grounding']:.0f}/100, "
                                                             f"{codes['campus_clean'].count('UNSUPPORTED_CLAIM')} claims no document holds.", {"color": MUTED})]]
     d.text(0.6, 4.75, 6.1, 2.2, findings, size=14, after=8)

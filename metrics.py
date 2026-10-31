@@ -64,7 +64,7 @@ def stages_section(out, data):
     if not all(c in data for c in ("campus_poisoned", "campus_hardened", "campus_clean")):
         out.append("## Three campus stages\n\nNot all three stages have results yet.\n")
         return
-    out.append("## Three campus stages, same 119-test suite\n")
+    out.append("## Three campus stages, same suite (92 tests plus 27 rephrasings)\n")
     out.append("Compare stage 1 with 2 for the prompt's effect, and 1 with 3 for the poison's. Stage 2 to 3 changes both.\n")
     out.append("| Dimension | " + " | ".join(STAGES[c] for c in ("campus_poisoned", "campus_hardened", "campus_clean")) + " |")
     out.append("|---|---|---|---|")
@@ -81,10 +81,15 @@ def stages_section(out, data):
     out.append("")
     out.append("Prompt injection findings, by stage: " + ", ".join(
         f"{c} {data[c]['codes'].get('PROMPT_INJECTION', 0)}" for c in ("campus_poisoned", "campus_hardened", "campus_clean")) + ".\n")
+    # The stages share one suite, so stage 1's failed tests are already the regression suite of stages 2 and 3.
+    first = {t["prompt"]: t["passed"] for t in load("data/sessions/campus_poisoned/results.json")["tests"]}
+    failed = {prompt for prompt, passed in first.items() if passed is False}
     for case in ("campus_hardened", "campus_clean"):
-        reg = data[case]["regression"]
-        if reg["total"]:
-            out.append(f"Regression on {case}: {reg['fixed']} of {reg['total']} stage-1 failures fixed, {reg['still_failing']} still failing.\n")
+        later = {t["prompt"]: t["passed"] for t in load(f"data/sessions/{case}/results.json")["tests"]}
+        rerun = [later[p] for p in failed if p in later]
+        fixed = sum(1 for passed in rerun if passed)
+        data.setdefault("carry_over", {})[case] = rate(fixed, len(rerun))
+        out.append(f"Stage 1's failed tests rerun on {case}: {fixed} of {len(rerun)} now pass, {len(rerun) - fixed} still fail.\n")
 
 
 def attack_section(out, data):
