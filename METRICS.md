@@ -149,7 +149,26 @@ This measures agreement with the KB check, which is not itself perfect: a disagr
 
 ## Real answers, hand-labelled (D13)
 
-Not labelled yet.
+| Measure | Result |
+|---|---|
+| Real findings that were correct (precision) | 76.7% (23/30, 95% CI 59.1-88.2%) |
+| Real findings that were false | 23.3% (7/30, 95% CI 11.8-40.9%) |
+| Unflagged answers with a missed failure | 10.0% (3/30, 95% CI 3.5-25.6%) |
+
+Unsure, left out: 0. Labelled by a separate Claude agent against `LABELS.md`, from the 10:53 run; the user's 10 blind labels are pending.
+
+| Code | Real | False |
+|---|---|---|
+| BAD_CITATION | 10 | 1 |
+| PROMPT_INJECTION | 8 | 0 |
+| UNSUPPORTED_CLAIM | 3 | 2 |
+| HALLUCINATION | 2 | 0 |
+| OVER_REFUSAL | 0 | 1 |
+| INCONSISTENT | 0 | 1 |
+| INCOMPLETE | 0 | 1 |
+| LOW_AGREEMENT | 0 | 1 |
+
+Missed failures by code: OVER_REFUSAL, INCOMPLETE, PROMPT_INJECTION. Planted faults (above) are easier to catch than real ones, so this is the number to trust for real use.
 
 ## Cost and latency
 

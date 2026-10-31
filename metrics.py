@@ -210,9 +210,24 @@ def labels_section(out, data):
     out.append(f"| Real findings that were correct (precision) | {pct(s['precision_on_real_findings'])} |")
     out.append(f"| Real findings that were false | {pct(s['false_finding_rate'])} |")
     out.append(f"| Unflagged answers with a missed failure | {pct(s['missed_failure_rate_in_unflagged'])} |")
-    if "agreement_with_user" in s:
+    blind = s.get("agreement_with_user", {}).get("total")
+    if blind:
         out.append(f"| Claude and the user agree, blind | {pct(s['agreement_with_user'])} |")
-    out.append(f"\nUnsure, left out: {s['unsure']}. Labelled by Claude against `LABELS.md`; the user re-labelled 10 blind.\n")
+    out.append(f"\nUnsure, left out: {s['unsure']}. Labelled by a separate Claude agent against `LABELS.md`, from the "
+               f"10:53 run; " + (f"the user re-labelled {blind} of the same items blind." if blind else "the user's 10 blind labels are pending.") + "\n")
+    import csv
+    items = list(csv.DictReader(open("data/labels/items.csv", encoding="utf-8")))
+    by_code = {}
+    for i in items:
+        if i["kind"] == "flagged" and i["label"] in ("true", "false"):
+            by_code.setdefault(i["code"], [0, 0])[i["label"] == "false"] += 1
+    out.append("| Code | Real | False |")
+    out.append("|---|---|---|")
+    for code, (real, false) in sorted(by_code.items(), key=lambda kv: -sum(kv[1])):
+        out.append(f"| {code} | {real} | {false} |")
+    missed = [i["label"].split()[1] for i in items if i["kind"] == "unflagged" and i["label"].startswith("missed")]
+    out.append(f"\nMissed failures by code: {', '.join(missed) or 'none'}. "
+               "Planted faults (above) are easier to catch than real ones, so this is the number to trust for real use.\n")
 
 
 def cost_section(out, data):

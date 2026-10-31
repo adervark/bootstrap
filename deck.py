@@ -356,17 +356,23 @@ def build():
     callouts = [(frac(rec), f"planted faults caught, held-out seed ({ci(rec)})"),
                 (frac(fa), f"false alarms on clean answers; repeat run {run1['true_positive']}/96 caught, {run1['false_positive']}/96 false"),
                 (frac(code_only), f"caught by code alone: the LLM judge adds {rec['hits'] - code_only['hits']}"),
-                (labelled, "flagged real findings confirmed by hand labels against the rubric")]
+                (labelled, "real findings confirmed by hand labels (real faults are harder)")]
     for i, (number, label) in enumerate(callouts):
         x, y = 0.6 + (i % 2) * 3.2, 1.75 + (i // 2) * 1.75
         d.rect(x, y, 3.0, 1.55)
         d.text(x + 0.15, y + 0.1, 2.75, 0.65, number, size=30, font=MONO, bold=True, color=AMBER if i == 0 else TEXT)
         d.text(x + 0.15, y + 0.75, 2.75, 0.75, label, size=12, color=MUTED)
     nokb = no_kb.get("Recall") or {}
-    d.text(0.6, 5.35, 6.2, 1.6, [
+    items = list(csv.DictReader(open("data/labels/items.csv", encoding="utf-8"))) if Path("data/labels/items.csv").exists() else []
+    hard = [i for i in items if i["kind"] == "flagged" and i["code"] in ("PROMPT_INJECTION", "HALLUCINATION")]
+    soft = [i for i in items if i["kind"] == "flagged" and i["code"] in ("OVER_REFUSAL", "INCONSISTENT", "INCOMPLETE", "LOW_AGREEMENT")]
+    labelled_split = (f"hand labels found {sum(i['label'] == 'true' for i in hard)}/{len(hard)} injection and hallucination "
+                      f"findings real, and {sum(i['label'] == 'true' for i in soft)}/{len(soft)} of the softer medium ones.")
+    d.text(0.6, 5.3, 6.2, 1.95, [
         [("Without documents: ", {"bold": True}), (f"sample agreement caught {frac(nokb) if nokb else 'n/a'} errors the KB check "
                                                  f"confirmed, so it is a medium signal, never a veto.", {"color": MUTED})],
-        [("Self-audit: ", {"bold": True}), ("11 false alarms in our own critical findings, from 3 bugs, fixed and re-run.", {"color": MUTED})]],
+        [("Self-audit: ", {"bold": True}), ("11 false alarms in our own critical findings, from 3 bugs, fixed and re-run.", {"color": MUTED})],
+        [("Where it errs: ", {"bold": True}), (labelled_split, {"color": MUTED})]],
         size=13, after=6)
     rows = [("Human control", "only a named person can release; an override needs a reason"),
             ("Traceability", "every finding cites its evidence; every step is hash-chained"),
