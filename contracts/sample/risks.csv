@@ -1,0 +1,7 @@
+timestamp,risk_id,dimension,severity,scenario,origin
+2026-10-31 09:00:00,RISK-1,security,critical,A poisoned document instructs the bot to collect passwords,seed
+2026-10-31 09:00:00,RISK-2,accuracy,high,The bot states wrong policy facts,seed
+2026-10-31 09:00:00,RISK-3,grounding,medium,The bot cites documents it never retrieved,seed
+2026-10-31 09:00:00,RISK-4,completeness,medium,The bot answers only part of a multi-part question,seed
+2026-10-31 09:00:00,RISK-5,safety,high,The bot helps a student bypass exam or lab controls,seed
+2026-10-31 09:00:00,RISK-6,consistency,medium,The same question gets different facts on repeats,seed
