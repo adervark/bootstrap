@@ -14,6 +14,7 @@ key. That measures agreement with the KB check, which is not itself perfect.
 
 Run: set -a; . ./.env; set +a; python3 calibrate.py
      python3 calibrate.py --no-kb data/sessions/campus_poisoned data/sessions/campus_clean
+     python3 calibrate.py --held-out   (a fresh set, written to data/calibration_heldout.json)
 """
 import json
 import random
@@ -30,9 +31,17 @@ ROOT = Path(__file__).parent
 OUTPUT = ROOT / "data" / "calibration.json"
 SEED = 7
 PER_FAULT = 8  # items per fault type
+# The held-out set: fresh items from the same fault recipes, with a seed no check was tuned on. It is
+# the number to present, because the main set was used for tuning. No code may change after reading it.
+HELD_OUT = ROOT / "data" / "calibration_heldout.json"
+HELD_OUT_SEED = 2026
+HELD_OUT_NOTE = ("Held out: built with a seed that was never used while writing or tuning the checks, and no check was "
+                 "changed after this set was first run. The fault recipes are the same code as the main set, so it is new "
+                 "items, not new kinds of fault.")
 # Set by hand when a check in analyze.py changed after seeing this set's errors: then these numbers
 # are not a clean test, and the JSON says so.
 TUNED = True
+HELD = False  # set by --held-out
 TUNING_NOTE = ("Used for tuning. After the first run's errors, one bug was fixed: a claim word for word in the KB "
                "skipped the wrong-document citation check, which missed 3 of 4 both_retrieved items. First run, before "
                "any change: overall precision 1.0, recall 0.929, false-positive rate 0.0 (same seed; the LLM rewrites questions and "
@@ -210,7 +219,7 @@ def with_lures(target):
 def build_items():
     """The labelled set. Returns items of {id, label, variant, answer, sources, test, target}."""
     targets = load_targets()
-    rng = random.Random(SEED)
+    rng = random.Random(SEED if not HELD else HELD_OUT_SEED)
     pool = [sentence for target in targets for sentence in kb_sentences(target)]
     add_questions(pool)
     rng.shuffle(pool)
@@ -376,8 +385,8 @@ def run():
     state, after = analyze.health(), llm.usage()
     clean = sum(i["label"] == "clean" for i in items)
     result = {
-        "generated_at": datetime.now().isoformat(timespec="seconds"), "seed": SEED,
-        "tuned_on_this_set": TUNED, "tuning_note": TUNING_NOTE,
+        "generated_at": datetime.now().isoformat(timespec="seconds"), "seed": HELD_OUT_SEED if HELD else SEED,
+        "tuned_on_this_set": False if HELD else TUNED, "tuning_note": HELD_OUT_NOTE if HELD else TUNING_NOTE,
         "benchmark_note": ("Planted faults can be easier to catch than real ones: a benchmark, not real-world accuracy. Clean controls "
                            "are built from KB sentences, so they lack things real answers say, such as statements about the bot itself; "
                            "false positives of that kind were found by reading real target answers, not by this set."),
@@ -388,6 +397,9 @@ def run():
         **summary(items), "code_only": summary(items, "code_only"),
         "items": [{key: i[key] for key in ("id", "label", "variant", "answer", "codes", "code_only", "details")} | {"prompt": i["test"]["prompt"]} for i in items],
     }
+    if HELD:
+        HELD_OUT.write_text(json.dumps(result, indent=1), encoding="utf-8")
+        return result
     if OUTPUT.exists():  # no_kb() writes to the same file and is run separately
         previous = json.loads(OUTPUT.read_text(encoding="utf-8")).get("no_kb")
         if previous:
@@ -455,6 +467,10 @@ if __name__ == "__main__":
     if "--no-kb" in sys.argv:
         measured = no_kb([a for a in sys.argv[1:] if a != "--no-kb"])
         print({k: v for k, v in measured.items() if k != "rows"})
+    elif "--held-out" in sys.argv:
+        HELD, PER_FAULT = True, 12  # more items than the main set, for a tighter estimate
+        show(run())
+        print(f"wrote {HELD_OUT}")
     else:
         show(run())
-    print(f"wrote {OUTPUT}")
+        print(f"wrote {OUTPUT}")

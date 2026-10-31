@@ -137,3 +137,20 @@ to use if a juror asks. Newest last.
   retrieved documents, so the combined result is measured separately.
 - If asked: "It doesn't cry wolf when the bot warns users, and it catches what a
   prompt can't fix."
+
+## D12. Every number is measured, with its sample size (user)
+
+- "This can't be slop: it has to rely on metrics and numbers" (user, 2026-10-31).
+- The three campus stages run the same suite, so differences come from the app.
+- Detection accuracy is reported on a held-out set (`data/calibration_heldout.json`,
+  a seed never used while tuning, 12 items per fault), not on the tuned set.
+- Each rate is given with its count and a 95% Wilson interval, because a sample
+  of 12 cannot support a precise percentage.
+
+## D13. Real-answer labels: Claude labels 60, the user re-labels 10 blind (user)
+
+- 30 flagged and 30 unflagged real answers, labelled against the KB with the rubric
+  in `LABELS.md`, one reason per item. The user re-labels a random 10 without seeing
+  Claude's labels, and agreement is reported.
+- Gives the real-answer false-positive and miss rates, which the seeded set cannot.
+- If asked: "Labelled by a written rubric, with a two-person spot check."
