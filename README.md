@@ -119,4 +119,4 @@ Setting up the target apps' own virtualenvs is in `DECISIONS.md` D1 and
 | What if the API is down? | Code checks still run, the code baseline verdict stands and can never be Release, and the page shows the saved report. |
 | Did you write the attacks that worked after the first failed? | Yes, as an attacker would. The blatant poison was resisted; the fake portal URL was not. `DECISIONS.md` D9 to D11. |
 | Was any of this written before the event? | A generic skeleton (an LLM call, a FastAPI page, a contract checker). Everything specific to this brief was written today; see the git history. |
-| What would you build next? | Claims split from every sample in the no-KB check, a real production log sampler, and more target adapters. |
+| What would you build next? | Claims split from every sample in the no-KB check, a real production log sampler, and more target adapters: OpenAI's airline customer-service agents (multi-agent, with its own jailbreak guardrail), AIGoat (OWASP-mapped RAG and agent labs) and the Damn Vulnerable MCP Server (tool poisoning). Each needs only an adapter that serves `POST /ask`. |
