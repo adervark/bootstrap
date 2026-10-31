@@ -277,7 +277,7 @@
     <section id="replay">
       <h2>Simulation: a full evaluation run, replayed</h2>
       <div class="form-row" style="margin-top:0">
-        <button id="replay-run" class="primary">Play</button>
+        <button id="replay-run" class="primary">Run</button>
         <span id="replay-figs" class="figs"></span>
       </div>
       <div class="replay-grid">
@@ -289,7 +289,7 @@
         </div>
         <div>
           <div class="label">Tests as they ran, newest first</div>
-          <div id="replay-feed" class="feed muted">Press Play.</div>
+          <div id="replay-feed" class="feed muted">Press Run.</div>
         </div>
       </div>
       <div class="hero-kv" id="replay-end" hidden style="margin-top:14px">
@@ -1099,7 +1099,7 @@
       const curve = [];
       const recent = [];
       $("replay-end").hidden = true;
-      $("replay-run").textContent = "Replay again";
+      $("replay-run").textContent = "Run again";
       const dimChart = bars("chart-replay-dims", dims, dims.map(() => 0),
         { max: Math.max(1, ...dims.map((d) => order.filter((x) => x.dimension === d).length)), fails: (v) => v > 0 });
       const line = chart("chart-replay-attacks", { type: "line",
