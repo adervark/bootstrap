@@ -3,3 +3,4 @@
 __pycache__/
 .omc/
 data/raw/targets/
+targets/.run/
