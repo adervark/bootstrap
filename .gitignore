@@ -4,3 +4,4 @@ __pycache__/
 .omc/
 data/raw/targets/
 targets/.run/
+data/sessions/*/check_cache.json

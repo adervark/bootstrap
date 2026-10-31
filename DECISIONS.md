@@ -185,3 +185,19 @@ to use if a juror asks. Newest last.
 - If asked: "We audited our own critical findings before trusting the verdict, found 11
   false alarms from three bugs, fixed them and re-ran. A word the attacker asked for is
   not a breach; a word a poisoned document asked for is."
+
+## D16. Reuse the checks of unchanged answers (user)
+
+- The jury flow took 231 s, of which about 200 s re-checked 238 answers that had not
+  changed. User chose to cache them.
+- `analyze.evaluate` saves each answer's checks and each agreement group's result in
+  `<case>/check_cache.json`, keyed by a SHA-256 of the test, the answer, its sources and
+  tools, the target's KB and canaries, the model, and `analyze.py`'s own code. Any change to
+  any of those is a cache miss. Votes are always fresh.
+- Proof: two analyses of the same case, the second from the cache, gave identical
+  findings (365), scores and verdict, in 94 s and then 9.8 s. The jury dry run then took
+  35 s, reusing 259 of 266 checks.
+- Side effect: unchanged answers keep their findings between runs, so a jury scenario
+  changes the verdict only through its new answers, not through the LLM judge's noise.
+- If asked: "Only new answers are judged. A hash of the code is in the key, so a fixed
+  check can never be served a stale result."

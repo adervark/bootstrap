@@ -14,8 +14,9 @@ everything that can block a release (canaries, citations, quotes, vetoes) is pla
 
 Run: set -a; . ./.env; set +a; python3 analyze.py <case_dir> ...
 """
-import csv
 import base64
+import csv
+import hashlib
 import json
 import re
 import sys
@@ -946,6 +947,15 @@ def regression_status(tests, runs_by_test, findings):
             "still_failing": sum(i["state"] == "still failing" for i in items), "items": items}
 
 
+def cache_key(*parts):
+    """A hash of everything a check's result depends on, including this file's own code, so any change
+    to a check, a test, an answer or the model makes the saved result stale."""
+    return hashlib.sha256(json.dumps([CODE_HASH, llm.MODEL, *parts], sort_keys=True, default=str).encode()).hexdigest()
+
+
+CODE_HASH = hashlib.sha256(Path(__file__).read_bytes()).hexdigest()
+
+
 def evaluate(case_dir, judge=True, stance=None):
     """Everything that does not need a vote: findings F-001 onward, tests, scorecard, regression.
     stance as in verify_answer: monitor.py wants lure stance checks without the claim judge."""
@@ -956,10 +966,25 @@ def evaluate(case_dir, judge=True, stance=None):
         runs_by_test.setdefault(run["test_id"], []).append(run)
 
     stance_notes = []  # list.append is safe across these threads
+    # Checks of unchanged answers are reused, so a jury scenario only pays for its new answers.
+    cache_path = Path(case_dir, "check_cache.json")
+    cache = json.loads(cache_path.read_text(encoding="utf-8")) if cache_path.exists() else {}
+    used, reused = {}, []
 
     def one(run):
-        return verify_answer(run["answer"], run["sources"], by_test.get(run["test_id"], {"prompt": ""}), target,
-                             tools=run["tools"], error=run["error"], judge=judge, stance=stance, notes=stance_notes)
+        test = by_test.get(run["test_id"], {"prompt": ""})
+        key = cache_key("answer", run["answer"], run["sources"], run["tools"], run["error"], test,
+                        target.get("kb"), target.get("canaries"), bool(judge), stance)
+        if key in cache:
+            reused.append(key)
+        else:
+            notes = []
+            found = verify_answer(run["answer"], run["sources"], test, target, tools=run["tools"], error=run["error"],
+                                  judge=judge, stance=stance, notes=notes)
+            cache[key] = {"found": found, "notes": notes}
+        used[key] = cache[key]
+        stance_notes.extend(cache[key]["notes"])
+        return cache[key]["found"]
 
     with ThreadPoolExecutor(MAX_LLM) as pool:
         per_run = list(pool.map(one, runs))
@@ -971,8 +996,21 @@ def evaluate(case_dir, judge=True, stance=None):
     for run, item in bias(pairs, runs_by_test, judge):
         extra.setdefault(run["run_id"], []).append(item)
     groups = agreement_groups(tests, runs_by_test)
+
+    def agree(group):
+        samples = [{"run_id": r["run_id"], "answer": r["answer"]} for r in group[1]]
+        key = cache_key("agreement", samples, bool(judge))
+        if key in cache:
+            reused.append(key)
+        else:
+            cache[key] = agreement(samples, llm_judge=judge)
+        used[key] = cache[key]
+        return cache[key]
+
     with ThreadPoolExecutor(MAX_LLM) as pool:
-        agreed = list(pool.map(lambda group: agreement([{"run_id": r["run_id"], "answer": r["answer"]} for r in group[1]], llm_judge=judge), groups))
+        agreed = list(pool.map(agree, groups))
+    cache_path.write_text(json.dumps(used), encoding="utf-8")  # only what this run used, so it never grows stale
+    audit.log(case_dir, "analyze.py", "checks_reused", reused=len(reused), total=len(runs) + len(groups))
     for result in agreed:
         for run_id, item in agreement_findings(result):
             extra.setdefault(run_id, []).append(item)
