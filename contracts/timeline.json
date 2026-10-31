@@ -1,0 +1,15 @@
+{
+  "case": "sample",
+  "times": ["2026-10-31 09:00", "2026-10-31 09:01", "2026-10-31 09:02"],
+  "limits": [{"name": "web.response_ms", "sign": ">", "value": 1000}],
+  "groups": [
+    {"source": "server", "series": [
+      {"name": "server.cpu_pct", "values": [29.4, 32.5, null]},
+      {"name": "server.db_ms", "values": [22.7, 20.5, null]}
+    ]},
+    {"source": "web", "series": [
+      {"name": "web.response_ms", "values": [158, 124, null]}
+    ]}
+  ],
+  "incidents": [{"first": 1, "last": 2}]
+}

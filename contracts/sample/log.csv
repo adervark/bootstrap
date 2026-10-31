@@ -1,0 +1,60 @@
+timestamp,level,message
+2026-10-31 09:00:01,info,worker pool: 8 busy / 50
+2026-10-31 09:02:01,info,worker pool: 8 busy / 50
+2026-10-31 09:04:01,info,worker pool: 9 busy / 50
+2026-10-31 09:06:01,info,worker pool: 12 busy / 50
+2026-10-31 09:08:01,info,worker pool: 13 busy / 50
+2026-10-31 09:10:01,info,worker pool: 14 busy / 50
+2026-10-31 09:10:05,error,[client 203.0.113.9] File does not exist: /var/www/html/wp-login.php
+2026-10-31 09:10:06,error,[client 203.0.113.9] File does not exist: /var/www/html/xmlrpc.php
+2026-10-31 09:10:07,error,[client 203.0.113.9] File does not exist: /var/www/html/.env
+2026-10-31 09:10:08,error,[client 203.0.113.9] File does not exist: /var/www/html/admin.php
+2026-10-31 09:10:09,error,[client 203.0.113.9] File does not exist: /var/www/html/phpmyadmin/
+2026-10-31 09:10:10,error,[client 203.0.113.9] File does not exist: /var/www/html/wp-login.php
+2026-10-31 09:10:11,error,[client 203.0.113.9] File does not exist: /var/www/html/xmlrpc.php
+2026-10-31 09:10:12,error,[client 203.0.113.9] File does not exist: /var/www/html/.env
+2026-10-31 09:10:13,error,[client 203.0.113.9] File does not exist: /var/www/html/admin.php
+2026-10-31 09:10:14,error,[client 203.0.113.9] File does not exist: /var/www/html/phpmyadmin/
+2026-10-31 09:10:15,error,[client 203.0.113.9] File does not exist: /var/www/html/wp-login.php
+2026-10-31 09:10:16,error,[client 203.0.113.9] File does not exist: /var/www/html/xmlrpc.php
+2026-10-31 09:10:17,error,[client 203.0.113.9] File does not exist: /var/www/html/.env
+2026-10-31 09:10:18,error,[client 203.0.113.9] File does not exist: /var/www/html/admin.php
+2026-10-31 09:10:19,error,[client 203.0.113.9] File does not exist: /var/www/html/phpmyadmin/
+2026-10-31 09:10:20,error,[client 203.0.113.9] File does not exist: /var/www/html/wp-login.php
+2026-10-31 09:10:21,error,[client 203.0.113.9] File does not exist: /var/www/html/xmlrpc.php
+2026-10-31 09:10:22,error,[client 203.0.113.9] File does not exist: /var/www/html/.env
+2026-10-31 09:10:23,error,[client 203.0.113.9] File does not exist: /var/www/html/admin.php
+2026-10-31 09:10:24,error,[client 203.0.113.9] File does not exist: /var/www/html/phpmyadmin/
+2026-10-31 09:10:25,error,[client 203.0.113.9] File does not exist: /var/www/html/wp-login.php
+2026-10-31 09:10:26,error,[client 203.0.113.9] File does not exist: /var/www/html/xmlrpc.php
+2026-10-31 09:10:27,error,[client 203.0.113.9] File does not exist: /var/www/html/.env
+2026-10-31 09:10:28,error,[client 203.0.113.9] File does not exist: /var/www/html/admin.php
+2026-10-31 09:10:29,error,[client 203.0.113.9] File does not exist: /var/www/html/phpmyadmin/
+2026-10-31 09:11:40,error,slow query took 1670 ms: UPDATE answers SET body=? WHERE id=?
+2026-10-31 09:12:01,info,worker pool: 11 busy / 50
+2026-10-31 09:12:10,error,slow query took 1412 ms: UPDATE answers SET body=? WHERE id=?
+2026-10-31 09:12:40,error,slow query took 1239 ms: UPDATE answers SET body=? WHERE id=?
+2026-10-31 09:13:10,error,slow query took 1582 ms: UPDATE answers SET body=? WHERE id=?
+2026-10-31 09:13:40,error,slow query took 1506 ms: UPDATE answers SET body=? WHERE id=?
+2026-10-31 09:14:01,info,worker pool: 11 busy / 50
+2026-10-31 09:14:10,error,slow query took 1098 ms: UPDATE answers SET body=? WHERE id=?
+2026-10-31 09:14:40,error,slow query took 1455 ms: UPDATE answers SET body=? WHERE id=?
+2026-10-31 09:15:10,error,slow query took 1147 ms: UPDATE answers SET body=? WHERE id=?
+2026-10-31 09:15:40,error,slow query took 1820 ms: UPDATE answers SET body=? WHERE id=?
+2026-10-31 09:16:01,info,worker pool: 11 busy / 50
+2026-10-31 09:16:10,error,slow query took 1810 ms: UPDATE answers SET body=? WHERE id=?
+2026-10-31 09:16:40,error,slow query took 990 ms: UPDATE answers SET body=? WHERE id=?
+2026-10-31 09:17:10,error,slow query took 716 ms: UPDATE answers SET body=? WHERE id=?
+2026-10-31 09:17:40,error,slow query took 812 ms: UPDATE answers SET body=? WHERE id=?
+2026-10-31 09:18:01,info,worker pool: 9 busy / 50
+2026-10-31 09:18:10,error,slow query took 1187 ms: UPDATE answers SET body=? WHERE id=?
+2026-10-31 09:18:40,error,slow query took 1117 ms: UPDATE answers SET body=? WHERE id=?
+2026-10-31 09:19:10,error,slow query took 1517 ms: UPDATE answers SET body=? WHERE id=?
+2026-10-31 09:19:40,error,slow query took 1636 ms: UPDATE answers SET body=? WHERE id=?
+2026-10-31 09:20:01,info,worker pool: 11 busy / 50
+2026-10-31 09:20:10,error,slow query took 1157 ms: UPDATE answers SET body=? WHERE id=?
+2026-10-31 09:20:40,error,slow query took 1152 ms: UPDATE answers SET body=? WHERE id=?
+2026-10-31 09:22:01,info,worker pool: 12 busy / 50
+2026-10-31 09:24:01,info,worker pool: 8 busy / 50
+2026-10-31 09:26:01,info,worker pool: 13 busy / 50
+2026-10-31 09:28:01,info,worker pool: 8 busy / 50

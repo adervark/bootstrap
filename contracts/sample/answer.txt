@@ -1,0 +1,1 @@
+09:12-09:20 database slowdown: slow UPDATEs on the answers table, db_ms 20 -> 600-900, pages over 1 s (planted). The 09:10 bot scan from 203.0.113.9 is a decoy: its 404s only affect the bot, and CPU, memory and users stay flat.
