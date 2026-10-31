@@ -1,10 +1,10 @@
 # LLM Release Gate
 
-A reusable AI quality framework for LLM-enabled apps. It generates tests from
-risks, runs them against the app, checks every answer against the truth (and, when
-there is no truth to check against, against the app's own consistency), scores six
-dimensions and recommends **Release**, **Conditional Release** or **Reject** with the
-evidence behind it. Only a named human can approve a release.
+A reusable AI quality and safety framework for LLM-powered applications. It dynamically
+derives tests from identified risks, executes them against target apps, evaluates responses
+against ground truth (or self-consistency when ground truth is absent), scores six critical
+quality dimensions, and delivers an evidence-backed recommendation of **Release**,
+**Conditional Release**, or **Reject**. Final release approval strictly requires human review.
 
 - `PROBLEM.md`: the brief, word for word, with a checklist.
 - `DECISIONS.md`: every design decision, who made it, why, and the line for a juror.
@@ -74,9 +74,9 @@ python3 metrics.py                                    # METRICS.md
 .venv/bin/uvicorn app:app                             # the page: http://127.0.0.1:8000
 ```
 
-The page shows the saved reports instantly, so it works if the LLM API is down. The
-jury scenario box turns free text into a new risk and new tests, runs them and
-re-decides.
+The dashboard displays cached evaluation reports instantly, ensuring resilience even if
+the LLM API is unavailable. The interactive jury scenario box transforms unstructured risk prompts
+into targeted test cases, executes them on-the-fly, and updates the release decision in real time.
 
 Setting up the target apps' own virtualenvs is in `DECISIONS.md` D1 and
 `targets/start.sh`.
