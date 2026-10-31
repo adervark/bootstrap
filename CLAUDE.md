@@ -63,6 +63,9 @@ the CLI and `report.md` instead. Never skip Harden.
 
 ## Opening move, when the PS arrives
 
+The hackathon's theme is "AI for Tech: Campus IT Operations" (user,
+2026-10-28), so expect a campus IT system: a portal, LMS, network, labs.
+
 1. Transcribe the PS (often a photo) into `PROBLEM.md`, word for word.
 2. Under it, list every required output and every named data field as a
    checklist.
@@ -257,6 +260,15 @@ something, say so."
 - `static/index.html`: plain HTML and JavaScript, Chart.js for the timeline
   with incidents shaded, marked.js to render the report. Load both from
   files in `static/`, not from a CDN. Why: venue Wi-Fi.
+- The look is a calm Bloomberg-style terminal (user, 2026-10-29 and
+  2026-10-30): a black page, IBM Plex Sans Condensed and IBM Plex Mono from
+  `static/fonts/`, white for values, grey for labels. Amber marks only where
+  you are, the main button and the line with a limit; red marks only an
+  incident; never lemon yellow (use the muted gold `#E8C35A` if a "slow"
+  state is needed). One stacked timeline, not many panels. `static/index.html`
+  already does this. Why: the user asked for "professional like a bloomberg
+  terminal", then said the full version was "too hectic … people dont know
+  what to focus on" and "the yellow looks tacky".
 - One small chart per metric, grouped by data source, never one chart with
   two y-axes. Force every y-axis to the same width
   (`afterFit: (scale) => { scale.width = 50; }`) so the minutes line up.

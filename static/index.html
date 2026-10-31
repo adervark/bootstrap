@@ -7,42 +7,119 @@
   <script src="/static/chart.umd.js"></script>
   <script src="/static/marked.min.js"></script>
   <style>
-    body { font-family: system-ui, sans-serif; max-width: 1100px; margin: 0 auto;
-           padding: 16px; color: #1f2328; background: #fff; }
-    h1 { font-size: 1.4rem; margin-bottom: 8px; }
-    h2 { grid-column: 1 / -1; font-size: 1rem; margin: 12px 0 0; }
-    h3 { font-size: 0.85rem; font-weight: 500; color: #59636e; margin: 0 0 4px; }
-    .muted { color: #59636e; }
-    select, button { font: inherit; }
-    button { padding: 8px 16px; border-radius: 6px; border: 0;
-             background: #1f2328; color: #fff; cursor: pointer; }
-    button:disabled { opacity: 0.5; cursor: wait; }
-    button.view { background: #eff2f5; color: #1f2328; padding: 4px 10px; margin: 0 6px 6px 0; }
-    #charts { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 24px; }
-    .chart { position: relative; height: 140px; }
-    @media (max-width: 700px) { #charts { grid-template-columns: 1fr; } }
-    #report { border-top: 1px solid #d1d9e0; margin-top: 16px; line-height: 1.5; }
-    #report pre { background: #f6f8fa; padding: 12px; overflow-x: auto; font-size: 0.8rem; }
+    /* A trading terminal: a black screen, square panels, dense numbers.
+       Calm by default, so the eye goes where it should:
+       - white is a value, grey is a label;
+       - amber marks where you are, what you can press, and the line with a limit;
+       - red only ever means an incident. */
+    @font-face { font-family: "IBM Plex Sans Condensed"; font-weight: 400; src: url(/static/fonts/plex-sans-condensed-400.woff2) format("woff2"); }
+    @font-face { font-family: "IBM Plex Sans Condensed"; font-weight: 600; src: url(/static/fonts/plex-sans-condensed-600.woff2) format("woff2"); }
+    @font-face { font-family: "IBM Plex Sans Condensed"; font-weight: 700; src: url(/static/fonts/plex-sans-condensed-700.woff2) format("woff2"); }
+    @font-face { font-family: "IBM Plex Mono"; font-weight: 400; src: url(/static/fonts/plex-mono-400.woff2) format("woff2"); }
+    @font-face { font-family: "IBM Plex Mono"; font-weight: 500; src: url(/static/fonts/plex-mono-500.woff2) format("woff2"); }
+
+    :root {
+      --black: #000000;     /* page */
+      --bar: #1C1C1C;       /* selected controls, hover */
+      --rule: #343434;      /* borders */
+      --rule-soft: #1A1A1A; /* chart grid */
+      --text: #EDEDED;      /* values */
+      --muted: #8F8F8F;     /* labels */
+      --faint: #5A5A5A;     /* hints */
+      --amber: #FFA028;
+      --alarm-soft: rgba(255, 64, 64, 0.18);  /* an incident */
+      --sans: "IBM Plex Sans Condensed", "Arial Narrow", sans-serif;
+      --mono: "IBM Plex Mono", ui-monospace, monospace;
+      color-scheme: dark;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--black); color: var(--text); font: 14px/1.45 var(--sans); }
+    button, select { font: inherit; color: inherit; }
+    :focus-visible { outline: 1px solid var(--amber); outline-offset: 1px; }
+    .label { color: var(--muted); font-size: 11.5px; font-weight: 600;
+             letter-spacing: 0.05em; text-transform: uppercase; }
+    .muted { color: var(--muted); }
+
+    /* Masthead: the name, the case, then the views. It stays on screen. */
+    header { position: sticky; top: 0; z-index: 1; background: var(--black);
+             border-bottom: 1px solid var(--rule); }
+    .bar { display: flex; align-items: center; gap: 16px; padding: 8px 16px; flex-wrap: wrap; }
+    .brand { color: var(--amber); font-size: 16px; font-weight: 700;
+             letter-spacing: 0.06em; text-transform: uppercase; }
+    select { background: var(--black); border: 1px solid var(--rule); padding: 3px 6px;
+             font-family: var(--mono); font-size: 13px; }
+    #views { display: flex; gap: 2px; padding: 0 16px; overflow-x: auto; }
+    #views button { background: none; border: 0; border-bottom: 2px solid transparent;
+                    padding: 7px 10px; color: var(--muted); cursor: pointer; white-space: nowrap;
+                    font-size: 12.5px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; }
+    #views button:hover { color: var(--text); }
+    #views button.on { color: var(--amber); border-bottom-color: var(--amber); }  /* where you are */
+
+    main { max-width: 1200px; margin: 0 auto; padding: 12px 16px 48px; }
+    #summary { font-family: var(--mono); font-size: 13px; padding: 8px 0 12px;
+               border-bottom: 1px solid var(--rule-soft); }
+
+    /* The timeline: one row per series, stacked on the same steps, so the eye
+       can go straight down from an incident to what moved with it. */
+    .group { margin: 14px 0 2px; font-size: 12.5px; font-weight: 600;
+             letter-spacing: 0.05em; text-transform: uppercase; }
+    .row { display: grid; grid-template-columns: 190px 1fr; align-items: center;
+           border-top: 1px solid var(--rule-soft); }
+    .row .label { overflow-wrap: anywhere; padding-right: 8px; }
+    .chart { position: relative; height: 72px; }
+    .row.last .chart { height: 96px; }  /* only the last row shows the time axis */
+    @media (max-width: 700px) { .row { grid-template-columns: 1fr; } }
+
+    .actions { display: flex; align-items: center; gap: 12px; margin: 20px 0 8px; }
+    button.primary { background: var(--amber); color: var(--black); border: 0; padding: 7px 16px;
+                     font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; cursor: pointer; }
+    button.primary:disabled { opacity: 0.5; cursor: wait; }
+    #status { font-family: var(--mono); font-size: 12.5px; }
+    details { margin: 8px 0 0; color: var(--muted); }
+    summary { cursor: pointer; }
+    #answer-text { color: var(--text); font-family: var(--mono); font-size: 13px; }
+
+    /* The report: white text in one quiet column; headings are grey labels. */
+    #report { margin-top: 16px; border-top: 1px solid var(--rule); max-width: 900px; line-height: 1.55; }
+    #report h1 { font-size: 20px; margin: 16px 0 8px; }
+    #report h2 { color: var(--muted); font-size: 12.5px; letter-spacing: 0.05em; text-transform: uppercase;
+                 border-top: 1px solid var(--rule-soft); padding-top: 12px; margin: 20px 0 6px; }
+    #report h3 { font-size: 15px; margin: 14px 0 4px; }
+    #report code { font-family: var(--mono); font-size: 0.86em; }
+    #report pre { background: #0B0B0B; border: 1px solid var(--rule); padding: 12px;
+                  overflow-x: auto; font-size: 12px; }
   </style>
 </head>
 <body>
-  <h1>Root-cause analysis</h1> <!-- PS: the problem in a few words -->
-  <p><label>Case <select id="case"></select></label></p>
-  <p class="muted" id="summary">Loading…</p>
-  <div id="views"></div>
-  <div id="charts"></div>
-  <p><button id="run">Run analysis</button> <span class="muted" id="status"></span></p>
-  <details id="answer">
-    <summary>Answer key (the LLM never sees this)</summary>
-    <p id="answer-text"></p>
-  </details>
-  <article id="report"></article>
+  <header>
+    <div class="bar">
+      <span class="brand">RCA</span> <!-- PS: a short product name -->
+      <span>Root-cause analysis</span> <!-- PS: the problem in a few words -->
+      <label class="label">Case <select id="case"></select></label>
+    </div>
+    <nav id="views"></nav>
+  </header>
+  <main>
+    <p id="summary">Loading…</p>
+    <section id="charts"></section>
+    <div class="actions">
+      <button id="run" class="primary">Run analysis</button> <span class="muted" id="status"></span>
+    </div>
+    <details id="answer">
+      <summary class="label">Answer key (the LLM never sees this)</summary>
+      <p id="answer-text"></p>
+    </details>
+    <article id="report"></article>
+  </main>
 
   <script>
     // The page knows no metric names: it draws whatever /api/timeline sends,
-    // one small chart per series, grouped by the file it came from, all on the
-    // same steps so the eye can go down a column.
-    const LINE = "#0969da";
+    // one row per series, grouped by the file it came from.
+    const css = (name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+    Chart.defaults.color = css("--muted");
+    Chart.defaults.borderColor = css("--rule-soft");
+    Chart.defaults.font.family = css("--mono");
+    Chart.defaults.font.size = 10.5;
     let charts = [];
     let answers = {};
 
@@ -55,7 +132,7 @@
         beforeDatasetsDraw(chart) {
           const { ctx, chartArea, scales } = chart;
           ctx.save();
-          ctx.fillStyle = "rgba(207, 34, 46, 0.15)";
+          ctx.fillStyle = css("--alarm-soft");
           for (const { first, last } of incidents) {
             const left = scales.x.getPixelForValue(first);
             const right = scales.x.getPixelForValue(last);
@@ -69,29 +146,33 @@
     function drawCharts(t, labels) {
       charts.forEach((chart) => chart.destroy());
       charts = [];
-      const grid = document.getElementById("charts");
-      grid.innerHTML = "";
+      const box = document.getElementById("charts");
+      box.innerHTML = "";
+      const total = t.groups.reduce((n, group) => n + group.series.length, 0);
       for (const { source, series } of t.groups) {
         const heading = document.createElement("h2");
+        heading.className = "group";
         heading.textContent = source;
-        grid.append(heading);
+        box.append(heading);
         for (const { name, values } of series) {
-          const panel = document.createElement("div");
-          panel.innerHTML = `<h3></h3><div class="chart"><canvas></canvas></div>`;
-          const datasets = [{ label: name, data: values, borderColor: LINE,
-                              pointRadius: 0, borderWidth: 1.5 }];
+          const last = charts.length === total - 1;
+          const row = document.createElement("div");
+          row.className = last ? "row last" : "row";
+          row.innerHTML = `<h3 class="label"></h3><div class="chart"><canvas></canvas></div>`;
           const limit = t.limits.find((l) => l.name === name);
+          // textContent, not innerHTML: names come from CSV headers.
+          row.querySelector("h3").textContent =
+            limit ? `${name.split(".")[1]}  ${limit.sign} ${limit.value}` : name.split(".")[1];
+          box.append(row);
+          // Amber only for a line with a limit; every other line is plain white.
+          const datasets = [{ label: name, data: values, borderColor: limit ? css("--amber") : css("--text"),
+                              pointRadius: 0, borderWidth: limit ? 1.6 : 1.1 }];
           if (limit) {
-            datasets.push({ label: `limit ${limit.sign} ${limit.value}`,
-                            data: values.map(() => limit.value),
-                            borderColor: "#8c959f", borderDash: [4, 4],
+            datasets.push({ label: "limit", data: values.map(() => limit.value),
+                            borderColor: css("--faint"), borderDash: [4, 4],
                             pointRadius: 0, borderWidth: 1 });
           }
-          // textContent, not innerHTML: names come from CSV headers.
-          panel.querySelector("h3").textContent =
-            limit ? `${name}, dashed line = limit (${limit.sign} ${limit.value})` : name;
-          grid.append(panel);
-          charts.push(new Chart(panel.querySelector("canvas"), {
+          charts.push(new Chart(row.querySelector("canvas"), {
             type: "line",
             data: { labels, datasets },
             options: {
@@ -100,9 +181,10 @@
               interaction: { mode: "index", intersect: false },
               plugins: { legend: { display: false } },
               scales: {
-                x: { ticks: { maxTicksLimit: 8 } },
-                // Same y-axis width everywhere, so the steps line up across charts.
-                y: { beginAtZero: true, afterFit: (scale) => { scale.width = 50; } },
+                x: { ticks: { display: last, maxTicksLimit: 12 } },
+                // Same y-axis width everywhere, so the steps line up down the stack.
+                y: { beginAtZero: true, ticks: { maxTicksLimit: 3 },
+                     afterFit: (scale) => { scale.width = 50; } },
               },
             },
             plugins: [incidentBands(t.incidents)],
@@ -118,13 +200,13 @@
       box.innerHTML = "";
       const end = t.times.length - 1;
       const views = [["Whole case", 0, end], ...t.incidents.map(({ first, last }, i) =>
-        [`Incident ${i + 1}: ${labels[first]}–${labels[last]}`,
+        [`INC-${i + 1}  ${labels[first]}–${labels[last]}`,
          Math.max(first - 30, 0), Math.min(last + 30, end)])];
       for (const [label, min, max] of views) {
         const button = document.createElement("button");
-        button.className = "view";
         button.textContent = label;
         button.addEventListener("click", () => {
+          box.querySelectorAll("button").forEach((b) => b.classList.toggle("on", b === button));
           for (const chart of charts) {
             chart.options.scales.x.min = min;
             chart.options.scales.x.max = max;
@@ -133,6 +215,7 @@
         });
         box.append(button);
       }
+      box.firstChild.classList.add("on");
     }
 
     // Log lines can be attacker-controlled (bots choose the URLs they request),
@@ -160,8 +243,8 @@
       const labels = t.times.map((time) => (oneDay ? time.slice(11) : time.slice(5)));
       const rules = t.limits.map((l) => `${l.name} ${l.sign} ${l.value}`).join(" or ");
       summary.textContent =
-        `${t.times[0]} to ${t.times.at(-1)}, ${t.times.length} steps, ` +
-        `${t.incidents.length} incident(s) in red. A step is bad when ${rules}.`;
+        `${t.times[0]} to ${t.times.at(-1)} · ${t.times.length} steps · ` +
+        `${t.incidents.length} incident(s), shaded red · bad when ${rules}`;
       drawCharts(t, labels);
       drawViews(t, labels);
     }
