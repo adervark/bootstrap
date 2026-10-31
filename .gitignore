@@ -7,3 +7,6 @@ targets/.run/
 data/sessions/*/check_cache.json
 # The database's WAL side files; data/gate.db itself is committed, it is the record (D20).
 data/gate.db-*
+# Markdown stays local, except README.md (user, 2026-10-31).
+*.md
+!README.md
