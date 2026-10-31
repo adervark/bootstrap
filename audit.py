@@ -1,12 +1,13 @@
-"""A tamper-evident audit log: audit.jsonl in each case folder.
+"""A tamper-evident audit log: the audit table in data/gate.db, exported to audit.jsonl in each case folder.
 
-Each line holds its event plus a hash of itself and the line before it, so editing
-or deleting any earlier line breaks the chain, and verify() says where.
+Each entry holds its event plus a hash of itself and the entry before it, so editing
+or deleting any earlier entry breaks the chain, and verify() says where.
 """
 import hashlib
 import json
 from datetime import datetime
-from pathlib import Path
+
+import store
 
 GENESIS = "0" * 64
 
@@ -17,22 +18,17 @@ def _hash(entry):
 
 
 def read(case_dir):
-    path = Path(case_dir, "audit.jsonl")
-    if not path.exists():
-        return []
-    return [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line]
+    return store.audit_entries(case_dir)
 
 
 def log(case_dir, actor, action, **details):
     """Add one event. actor is who did it: a script's name, the llm, or a person."""
-    entries = read(case_dir)
-    entry = {"time": datetime.now().isoformat(timespec="seconds"), "actor": actor,
-             "action": action, "details": details,
-             "previous": entries[-1]["hash"] if entries else GENESIS}
-    entry["hash"] = _hash(entry)
-    with open(Path(case_dir, "audit.jsonl"), "a", encoding="utf-8") as f:
-        f.write(json.dumps(entry) + "\n")
-    return entry
+    def build(previous):
+        entry = {"time": datetime.now().isoformat(timespec="seconds"), "actor": actor,
+                 "action": action, "details": details, "previous": previous or GENESIS}
+        entry["hash"] = _hash(entry)
+        return entry
+    return store.append_audit(case_dir, build)
 
 
 def verify(case_dir):

@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>LLM Release Gate</title>
   <script src="/static/marked.min.js"></script>
+  <script src="/static/chart.umd.js"></script>
   <style>
     /* A trading terminal: a black screen, square panels, dense numbers.
        Calm by default, so the eye goes where it should:
@@ -72,6 +73,10 @@
     .screen-title { border-top: 0; padding-top: 6px; }
     .screen-step { color: var(--amber); font-family: var(--mono); margin-right: 12px; }
     .proves { margin: 0 0 14px; }
+    .chart-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 32px; margin-bottom: 14px; max-width: 1200px; }
+    .chart-box { position: relative; height: 150px; margin-top: 4px; }
+    .replay-grid { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: 0 32px; margin-top: 12px; }
+    #db-body { margin-bottom: 10px; }
     .screen-foot { display: flex; justify-content: space-between; margin-top: 28px; padding-top: 10px; border-top: 1px solid var(--rule); }
 
     main { max-width: 1400px; margin: 0 auto; padding: 8px 16px 64px; }
@@ -236,7 +241,7 @@
     <div class="banner" id="selftest" hidden></div>
     <div class="banner" id="offline" hidden></div>
 
-    <div class="screen" id="s1" data-nav="Verdict" data-proves="Should this app go live? The answer, the reason, the fix and how far to trust it, with the six scores.">
+    <div class="screen" id="p-verdict" data-nav="Verdict" data-proves="Should this app go live? The answer, the reason, the fix and how far to trust it, with the six scores.">
     <h2>Release recommendation</h2>
     <div class="hero">
       <section id="verdict" aria-live="polite">
@@ -268,7 +273,33 @@
 
     </div>
 
-    <div class="screen" id="s2" data-nav="Jury" data-proves="Type any risk in plain words. The gate writes new tests for it, runs them against the app and re-decides while you watch.">
+    <div class="screen" id="p-replay" data-nav="Replay" data-proves="The stored campus helpdesk run, replayed from the database at speed: each test, the app's answer and the gate's call, with the counts and charts building up to the verdict. No LLM calls, nothing re-run.">
+    <section id="replay">
+      <h2>Simulation: a full evaluation run, replayed</h2>
+      <div class="form-row" style="margin-top:0">
+        <button id="replay-run" class="primary">Play</button>
+        <span id="replay-figs" class="figs"></span>
+      </div>
+      <div class="replay-grid">
+        <div>
+          <div class="label">Failed tests so far, by dimension</div>
+          <div class="chart-box" style="height:200px"><canvas id="chart-replay-dims"></canvas></div>
+          <div class="label" style="margin-top:12px">Attacks that worked, as the run went on</div>
+          <div class="chart-box"><canvas id="chart-replay-attacks"></canvas></div>
+        </div>
+        <div>
+          <div class="label">Tests as they ran, newest first</div>
+          <div id="replay-feed" class="feed muted">Press Play.</div>
+        </div>
+      </div>
+      <div class="hero-kv" id="replay-end" hidden style="margin-top:14px">
+        <div class="label">Go live?</div><div class="verdict-line"><span id="replay-verdict"></span></div>
+        <div class="label">Why</div><div id="replay-why" class="big"></div>
+      </div>
+    </section>
+    </div>
+
+    <div class="screen" id="p-jury" data-nav="Jury" data-proves="Type any risk in plain words. The gate writes new tests for it, runs them against the app and re-decides while you watch.">
     <section id="jury">
       <h2>Dynamic adaptation: the jury's surprise scenario, live</h2>
       <div class="jury-grid">
@@ -291,7 +322,7 @@
 
     </div>
 
-    <div class="screen" id="s3" data-nav="Why" data-proves="Three LLM votes, each citing finding IDs, then code vetoes that can only make the verdict stricter.">
+    <div class="screen" id="p-why" data-nav="Why" data-proves="Three LLM votes, each citing finding IDs, then code vetoes that can only make the verdict stricter.">
     <section id="why">
       <h2>AI reasoning: why this recommendation</h2>
       <div class="kv">
@@ -304,7 +335,7 @@
 
     </div>
 
-    <div class="screen" id="s4" data-nav="Failures" data-proves="Every failure, classified by type and severity and mapped to OWASP, with the exact answer it came from. Click a row.">
+    <div class="screen" id="p-failures" data-nav="Failures" data-proves="Every failure, classified by type and severity and mapped to OWASP, with the exact answer it came from. Click a row.">
     <section id="findings">
       <h2>Failure taxonomy with evidence <span id="findings-count"></span></h2>
       <div id="findings-table" class="scroll"></div>
@@ -312,7 +343,7 @@
 
     </div>
 
-    <div class="screen" id="s5" data-nav="Tests" data-proves="Tests written from risks, then disguised and rephrased to attack the app. Every question and answer is kept and can be rerun.">
+    <div class="screen" id="p-tests" data-nav="Tests" data-proves="Tests written from risks, then disguised and rephrased to attack the app. Every question and answer is kept and can be rerun.">
     <section id="tests">
       <h2>Reusable evaluation dataset and test suite <span id="tests-count"></span></h2>
       <div id="metrics" class="metrics figs"></div>
@@ -322,15 +353,19 @@
 
     </div>
 
-    <div class="screen" id="s6" data-nav="Regression" data-proves="The same tests on three versions of the app: what each fix fixed, and what still fails.">
+    <div class="screen" id="p-regression" data-nav="Regression" data-proves="The same tests on three versions of the app: what each fix fixed, and what still fails.">
     <section id="compare">
       <h2>Regression suite: three versions of the app, the same tests</h2>
+      <div class="chart-row">
+        <div><div class="label">Attacks that worked, % of attack tests</div><div class="chart-box"><canvas id="chart-attacks"></canvas></div></div>
+        <div><div class="label">Overall score; amber line: the release limit</div><div class="chart-box"><canvas id="chart-overall"></canvas></div></div>
+      </div>
       <div id="compare-body"></div>
     </section>
 
     </div>
 
-    <div class="screen" id="s7" data-nav="Monitoring" data-proves="After release: a stored baseline, scheduled re-runs and an alert when a score drops.">
+    <div class="screen" id="p-monitoring" data-nav="Monitoring" data-proves="After release: a stored baseline, scheduled re-runs and an alert when a score drops.">
     <section id="monitoring">
       <h2>Continuous-monitoring plan</h2>
       <div id="monitoring-body"></div>
@@ -338,7 +373,7 @@
 
     </div>
 
-    <div class="screen" id="s8" data-nav="Human review" data-proves="The AI can block a release but never ship one: a named person approves or overrides, with a reason.">
+    <div class="screen" id="p-human" data-nav="Human review" data-proves="The AI can block a release but never ship one: a named person approves or overrides, with a reason.">
     <section id="human">
       <h2>Human review: required for critical release decisions</h2>
       <div id="human-state" class="msg" style="margin:0 0 10px"></div>
@@ -355,7 +390,7 @@
 
     </div>
 
-    <div class="screen" id="s9" data-nav="Measures" data-proves="The brief's success measures, each with the number we measured.">
+    <div class="screen" id="p-measures" data-nav="Measures" data-proves="The brief's success measures, each with the number we measured.">
     <section id="measures">
       <h2>Success measures</h2>
       <div id="measures-body"></div>
@@ -363,9 +398,10 @@
 
     </div>
 
-    <div class="screen" id="s10" data-nav="Audit" data-proves="Every step in a hash-chained log, the calibration benchmark and the full report.">
+    <div class="screen" id="p-audit" data-nav="Audit" data-proves="Every step in a hash-chained log, the calibration benchmark and the full report.">
     <section id="records">
       <h2>Test evidence and audit logs</h2>
+      <div id="db-body"></div>
       <details class="fold" id="audit">
         <summary><span class="label">Audit log</span> <span id="audit-badge"></span></summary>
         <div class="fold-body scroll" id="audit-body"></div>
@@ -499,6 +535,45 @@
       }
       out.append(text.slice(last));
       return [out, spans.length > 0];
+    }
+
+    // Charts: the page's own colours and fonts, no animation (nothing on this page moves by itself).
+    const charts = {};
+    if (window.Chart) Object.assign(Chart.defaults, { color: "#9A9A9A", borderColor: "#1F1F1F", animation: false,
+      font: { family: '"IBM Plex Mono", monospace', size: 12 }, maintainAspectRatio: false });
+    // Values at the end of each bar, and an amber line at a limit, drawn by this small plugin.
+    const marks = { id: "marks", afterDatasetsDraw(c, args, opts) {
+      const g = c.ctx;
+      g.save();
+      g.font = '12px "IBM Plex Mono", monospace';
+      g.fillStyle = "#EDEDED";
+      g.textBaseline = "middle";
+      c.getDatasetMeta(0).data.forEach((bar, i) => g.fillText(`${c.data.datasets[0].data[i]}${opts.unit || ""}`, bar.x + 6, bar.y));
+      if (typeof opts.limit === "number") {
+        const x = c.scales.x.getPixelForValue(opts.limit);
+        g.strokeStyle = "#FFA028";
+        g.lineWidth = 2;
+        g.beginPath();
+        g.moveTo(x, c.chartArea.top);
+        g.lineTo(x, c.chartArea.bottom);
+        g.stroke();
+      }
+      g.restore();
+    } };
+    function chart(id, config) {
+      if (!window.Chart) return null;
+      charts[id]?.destroy();
+      charts[id] = new Chart($(id), config);
+      return charts[id];
+    }
+    // A horizontal bar per label; red where the value fails (fails(value) is true).
+    function bars(id, labels, values, { max = 100, unit = "", limit, fails = () => false } = {}) {
+      return chart(id, { type: "bar", plugins: [marks],
+        data: { labels, datasets: [{ data: values, backgroundColor: values.map((v) => (fails(v) ? "#FF5050" : "#BDBDBD")), barThickness: 14 }] },
+        options: { indexAxis: "y", layout: { padding: { right: 48 } },
+          plugins: { legend: { display: false }, tooltip: { enabled: false }, marks: { unit, limit } },
+          scales: { x: { min: 0, max, grid: { color: "#1F1F1F" } },
+                    y: { grid: { display: false }, ticks: { color: "#EDEDED" }, afterFit: (scale) => { scale.width = 190; } } } } });
     }
 
     // Numbers inside a sentence, in mono, so they read the same as every other number on the page.
@@ -991,6 +1066,109 @@
       }));
     }
 
+    // One test in a feed. Line 1 the attack, line 2 the app's answer, line 3 the failure code and why; red is only the code.
+    function feedRow(item) {
+      const r = item.result, codes = r?.codes || [];
+      const line = (label, text, extra = []) =>
+        el("span", { class: "line", title: text }, el("span", { class: "label" }, label), " ", ...extra, text);
+      return el("div", { class: "feed-row" },
+        el("span", { class: "n muted" }, item.test_id),
+        el("span", { class: `enum ${r ? (r.passed ? "" : "red") : "muted"}` }, r ? (r.passed ? "PASS" : "FAIL") : "\u2026"),
+        el("span", { title: item.prompt }, item.prompt),
+        item.answers.length ? line("App", item.answers[0]) : line("App", "asking the app\u2026"),
+        r && !r.passed ? line("Why", r.detail || "", [el("span", { class: "enum red" }, codes[0] || ""),
+          codes.length > 1 ? ` +${codes.length - 1}` : "", " \u00b7 "]) : null);
+    }
+
+    // The simulation: the current case's stored run, replayed test by test at a steady pace. The tallies are
+    // computed from the stored results exactly as analyze.scorecard counts them; nothing is called or re-run.
+    const ATTACK_WON = new Set(["PROMPT_INJECTION", "DATA_LEAK", "PII_LEAK", "UNSAFE_CONTENT"]);  // analyze.ATTACK_WON
+    const REPLAY_MS = 220;
+    let replayTimer = null;
+    function replay() {
+      clearInterval(replayTimer);
+      const t = timeline;
+      if (!t?.tests?.length) { show("replay-feed", "This case has no stored run to replay."); return; }
+      const byId = Object.fromEntries((t.findings || []).map((f) => [f.id, f]));
+      const order = [...t.tests].sort((a, b) => a.id.localeCompare(b.id, undefined, { numeric: true }));
+      const dims = (t.scorecard?.dimensions || []).map((d) => d.name);
+      const failed = Object.fromEntries(dims.map((d) => [d, 0]));
+      const isAttack = (test) => test.dimension === "security" || test.dimension === "safety";
+      const attackTotal = order.filter(isAttack).length;
+      let done = 0, fails = 0, attacks = 0, found = 0;
+      const curve = [];
+      const recent = [];
+      $("replay-end").hidden = true;
+      $("replay-run").textContent = "Replay again";
+      const dimChart = bars("chart-replay-dims", dims, dims.map(() => 0),
+        { max: Math.max(1, ...dims.map((d) => order.filter((x) => x.dimension === d).length)), fails: (v) => v > 0 });
+      const line = chart("chart-replay-attacks", { type: "line",
+        data: { labels: [], datasets: [{ data: [], borderColor: "#FF5050", borderWidth: 2, pointRadius: 0, stepped: true }] },
+        options: { plugins: { legend: { display: false }, tooltip: { enabled: false } },
+          scales: { x: { title: { display: true, text: "tests run" }, grid: { color: "#1F1F1F" }, ticks: { maxTicksLimit: 8 } },
+                    y: { min: 0, max: attackTotal, grid: { color: "#1F1F1F" }, afterFit: (scale) => { scale.width = 50; } } } } });
+      const tick = () => {
+        const test = order[done++];
+        const mine = (test.findings || []).map((id) => byId[id]).filter(Boolean)
+          .sort((a, b) => (SEVERITY_RANK[a.severity] ?? 4) - (SEVERITY_RANK[b.severity] ?? 4));
+        found += mine.length;
+        if (!test.passed) { fails++; failed[test.dimension] = (failed[test.dimension] || 0) + 1; }
+        if (isAttack(test) && mine.some((f) => ATTACK_WON.has(f.code))) attacks++;
+        curve.push(attacks);
+        recent.unshift({ test_id: test.id, prompt: test.prompt, answers: [test.answer || ""],
+          result: { passed: test.passed, codes: [...new Set(mine.map((f) => f.code))], detail: mine[0]?.detail || "" } });
+        recent.length = Math.min(recent.length, 6);
+        show("replay-figs", fig("Tests", `${done} / ${order.length}`), fig("Failed", fails, fails ? "red" : ""),
+          fig("Attacks worked", `${attacks} / ${attackTotal}`, attacks ? "red" : ""), fig("Findings", found));
+        show("replay-feed", ...recent.map(feedRow));
+        if (dimChart) {
+          dimChart.data.datasets[0].data = dims.map((d) => failed[d]);
+          dimChart.data.datasets[0].backgroundColor = dims.map((d) => (failed[d] ? "#FF5050" : "#BDBDBD"));
+          dimChart.update("none");
+        }
+        if (line) {
+          line.data.labels = curve.map((_, i) => i + 1);
+          line.data.datasets[0].data = curve;
+          line.update("none");
+        }
+        if (done === order.length) {
+          clearInterval(replayTimer);
+          const d = t.decision || {};
+          show("replay-verdict", el("span", { class: `${VERDICT_CLASS[d.final_verdict] ?? "muted"}`, style: "font-size:28px;font-weight:700" },
+            (ANSWER[d.final_verdict] || d.final_verdict || "No decision").toUpperCase()));
+          show("replay-why", d.headline || "-");
+          $("replay-end").hidden = false;
+        }
+      };
+      show("replay-feed");
+      replayTimer = setInterval(tick, REPLAY_MS);
+    }
+
+    // What the database holds: the store behind every page.
+    function renderDb(db) {
+      if (!db?.counts) { show("db-body", el("p", { class: "muted" }, "The database could not be read.")); return; }
+      const c = db.counts, short = (name) => name.split("/").pop();
+      const apps = db.cases.map((row) => row.case_name);
+      const codes = [...new Set(db.codes.map((row) => row.code))];
+      const count = (app, code) => db.codes.find((row) => row.case_name === app && row.code === code)?.n || 0;
+      codes.sort((a, b) => apps.reduce((s, app) => s + count(app, b), 0) - apps.reduce((s, app) => s + count(app, a), 0));
+      show("db-body", el("div", { class: "kv" },
+        el("div", { class: "label" }, "Database"), el("div", { class: "figs" }, el("span", { class: "n" }, db.path),
+          fig("Risks", int(c.risks)), fig("Tests", int(c.tests)), fig("Answers", int(c.runs)), fig("Analyses", int(c.analyses)),
+          fig("Findings", int(c.findings)), fig("Audit entries", int(c.audit))),
+        el("div", { class: "label" }, "This case"), el("table", { style: "max-width:760px" },
+          el("thead", {}, el("tr", {}, ...["Analysis", "When", "Verdict", "Overall", "Status", "Findings"].map((h, i) => el("th", i > 2 ? { class: "num" } : {}, h)))),
+          el("tbody", {}, ...db.history.map((row) => el("tr", {},
+            el("td", { class: "n" }, `#${row.id}`), el("td", { class: "n" }, row.created.replace("T", " ")),
+            el("td", { class: `enum ${VERDICT_CLASS[row.final_verdict] ?? "muted"}` }, row.final_verdict || "none"),
+            el("td", { class: "num" }, num(row.overall)), el("td", { class: "num enum muted" }, row.status || "-"),
+            el("td", { class: "num" }, int(row.findings)))))),
+        el("div", { class: "label" }, "Across apps"), el("table", { style: "max-width:760px" },
+          el("thead", {}, el("tr", {}, el("th", {}, "Failure code, current analyses"), ...apps.map((app) => el("th", { class: "num" }, short(app))))),
+          el("tbody", {}, ...codes.map((code) => el("tr", {}, el("td", { class: "n" }, code),
+            ...apps.map((app) => el("td", { class: `num ${count(app, code) ? "" : "muted"}` }, count(app, code) || "-"))))))));
+    }
+
     // Each new test as it happens: the prompt, the app's answer, then the gate's call.
     function drawFeed(job) {
       const feed = job.feed || [];
@@ -1000,22 +1178,10 @@
       const answered = feed.filter((item) => item.answers.length).length;
       const judged = feed.filter((item) => item.result);
       const failed = judged.filter((item) => !item.result.passed).length;
-      // Line 1 the attack, line 2 the app's answer, line 3 the failure code and why; red is only the code.
-      const line = (label, text, extra = null) =>
-        el("span", { class: "line", title: text }, el("span", { class: "label" }, label), " ", ...(extra || []), text);
       show("feed",
         el("div", { class: "feed-tally figs" }, fig("New tests", feed.length), fig("Answered", answered),
           judged.length ? fig("Failed", `${failed} / ${judged.length}`, failed ? "red" : "") : fig("Checking", "\u2026")),
-        ...feed.map((item) => {
-          const r = item.result, codes = r?.codes || [];
-          return el("div", { class: "feed-row" },
-            el("span", { class: "n muted" }, item.test_id),
-            el("span", { class: `enum ${r ? (r.passed ? "" : "red") : "muted"}` }, r ? (r.passed ? "PASS" : "FAIL") : "\u2026"),
-            el("span", { title: item.prompt }, item.prompt),
-            item.answers.length ? line("App", item.answers[0]) : line("App", "asking the app\u2026"),
-            r && !r.passed ? line("Why", r.detail || "", [el("span", { class: "enum red" }, codes[0] || ""),
-              codes.length > 1 ? ` +${codes.length - 1}` : "", " \u00b7 "]) : null);
-        }));
+        ...feed.map(feedRow));
     }
 
     async function runScenario() {
@@ -1159,6 +1325,11 @@
           cell(reg ? int(reg.still_failing) : "-", delta(was?.regression?.still_failing, reg?.still_failing), reg?.still_failing ? "red" : ""));
       });
 
+      const shown = stages.filter((stage) => stage.t);
+      const attackRate = (t) => (t.scorecard?.attacks?.total ? Math.round(100 * t.scorecard.attacks.worked / t.scorecard.attacks.total) : 0);
+      bars("chart-attacks", shown.map((stage) => stage.setup), shown.map((stage) => attackRate(stage.t)), { unit: "%", fails: (v) => v > 0 });
+      bars("chart-overall", shown.map((stage) => stage.setup), shown.map((stage) => stage.t.scorecard?.overall ?? 0),
+           { limit: LIMIT_OVERALL, fails: (v) => v < LIMIT_OVERALL });
       const last = [...stages].reverse().find((stage) => stage.t?.regression?.items?.length);
       show("compare-body",
         el("div", { style: "overflow-x:auto" }, el("table", {},
@@ -1299,6 +1470,7 @@
         api(`/api/audit?${query(name)}`), api("/api/calibration"), api("/api/metrics"), api(`/api/monitor?${query(name)}`),
       ]);
       const json = async (reply) => (reply.status === "fulfilled" && reply.value.ok ? reply.value.json() : {});
+      api(`/api/db?${query(name)}`).then((r) => (r.ok ? r.json() : null)).then((db) => mine === showing && renderDb(db), () => renderDb(null));
       const metrics = await json(metricsReply);
       renderMonitoring(await json(monitorReply));
       if (mine !== showing) return;  // the case changed while these were on their way
@@ -1480,6 +1652,7 @@
       });
       $("run").addEventListener("click", runAnalysis);
       $("scenario-run").addEventListener("click", runScenario);
+      $("replay-run").addEventListener("click", replay);
       $("scenario").addEventListener("input", () => {
         $("scenario-count").textContent = `${$("scenario").value.length} / 2000`;
       });

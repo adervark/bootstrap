@@ -5,3 +5,6 @@ __pycache__/
 data/raw/targets/
 targets/.run/
 data/sessions/*/check_cache.json
+# The runtime database; the committed exports in each case folder seed it (store.py).
+data/gate.db
+data/gate.db-*

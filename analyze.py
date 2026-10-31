@@ -28,6 +28,7 @@ from pathlib import Path
 
 import audit
 import llm
+import store
 from redact import redact, redact_data
 
 csv.field_size_limit(10_000_000)  # a run's sources column holds whole documents
@@ -266,10 +267,7 @@ def wrap(text):
 
 
 def read(path):
-    if not Path(path).exists():
-        return []
-    with open(path, newline="", encoding="utf-8") as f:
-        return list(csv.DictReader(f))
+    return store.read_csv(path)
 
 
 def straight(text):
@@ -976,8 +974,7 @@ def evaluate(case_dir, judge=True, stance=None):
 
     stance_notes = []  # list.append is safe across these threads
     # Checks of unchanged answers are reused, so a jury scenario only pays for its new answers.
-    cache_path = Path(case_dir, "check_cache.json")
-    cache = json.loads(cache_path.read_text(encoding="utf-8")) if cache_path.exists() else {}
+    cache = store.cache_load(case_dir)
     used, reused = {}, []
 
     def one(run):
@@ -1020,7 +1017,7 @@ def evaluate(case_dir, judge=True, stance=None):
         agreed = list(pool.map(agree, groups))
     # A judged run keeps only what it used, so the file never grows stale; a code-only run (monitor.py) adds to it,
     # so it never wipes the judged results the jury flow relies on.
-    cache_path.write_text(json.dumps(used if judge else cache), encoding="utf-8")
+    store.cache_save(case_dir, used if judge else cache)
     audit.log(case_dir, "analyze.py", "checks_reused", reused=len(reused), total=len(runs) + len(groups))
     for result in agreed:
         for run_id, item in agreement_findings(result):
@@ -1370,9 +1367,8 @@ def run(case_dir):
         item["owasp"] = OWASP.get(item["code"], "")
     ordered = {key: result[key] for key in ("case", "target", "scorecard", "decision", "findings", "tests", "regression")}
     target = load_target(case_dir)
-    Path(case_dir, "results.json").write_text(json.dumps(redact_data({**ordered, "analysis": notes}, target), indent=1), encoding="utf-8")
     report = redact(build_report(ordered, notes, why, by_llm, dropped), target)
-    Path(case_dir, "report.md").write_text(report, encoding="utf-8")
+    store.save_analysis(case_dir, redact_data({**ordered, "analysis": notes}, target), report)
     audit.log(case_dir, "analyze.py", "report_written", llm_calls=card["cost"]["llm_calls"], tokens=tokens, cost_usd=card["cost"]["cost_usd"],
               llm_available=notes["llm_available"])
     return report
@@ -1381,9 +1377,8 @@ def run(case_dir):
 def timeline(case_dir):
     """What the page shows, in the shape of contracts/timeline.json. Uses results.json when it exists;
     otherwise code-only checks with an empty decision, writing nothing and calling no LLM."""
-    path = Path(case_dir, "results.json")
-    if path.exists():
-        saved = json.loads(path.read_text(encoding="utf-8"))
+    saved = store.results(case_dir)
+    if saved is not None:
         saved.pop("analysis", None)
         for item in saved["findings"]:
             item["owasp"] = OWASP.get(item["code"], "")
@@ -1404,7 +1399,7 @@ def approve(case_dir, name, reason, action):
     """A human's decision, D7. Needs a name and a reason. A blocked case can only be overridden and a
     pending one only approved; a decided case stays decided. Refused attempts are logged too."""
     name, reason, action = str(name or "").strip(), str(reason or "").strip(), str(action or "").strip()
-    path = Path(case_dir, "results.json")
+    saved = store.results(case_dir)
 
     def refuse(why):
         audit.log(case_dir, name or "unknown", "human_decision_refused", choice=action, reason=reason, why=why)
@@ -1414,9 +1409,8 @@ def approve(case_dir, name, reason, action):
         refuse("A name and a reason are both required.")
     if action not in ("approve", "override"):
         refuse("The action must be approve or override.")
-    if not path.exists():
+    if saved is None:
         refuse("This case has no decision yet: run the analysis first.")
-    saved = json.loads(path.read_text(encoding="utf-8"))
     decision = saved["decision"]
     if decision["status"] == "blocked" and action == "approve":
         refuse("A Reject cannot be approved: it needs action override, with a name and a reason.")
@@ -1429,12 +1423,12 @@ def approve(case_dir, name, reason, action):
     # The log comes first: a failed log must not leave a signed decision with no audit entry.
     audit.log(case_dir, name, "human_decision", choice=action, reason=reason, status=decision["status"],
               final_verdict=decision["final_verdict"])
-    path.write_text(json.dumps(saved, indent=1), encoding="utf-8")
+    store.update_results(case_dir, saved)
     return decision
 
 
 if __name__ == "__main__":
     for folder in sys.argv[1:]:
         print(run(folder))
-        print(f"wrote {Path(folder, 'report.md')} and results.json; LLM usage {llm.usage()}")
+        print(f"stored the analysis in {store.DB_PATH.name}, exported {Path(folder, 'report.md')} and results.json; LLM usage {llm.usage()}")
         print("audit chain:", audit.verify(folder))

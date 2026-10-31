@@ -23,6 +23,7 @@ from pathlib import Path
 from threading import Lock
 
 import audit
+import store
 
 ACTOR = "execute.py"
 ALLOWED_HOSTS = {"127.0.0.1", "localhost"}
@@ -63,17 +64,11 @@ def check_url(case_dir, url):
 
 
 def _read_csv(path):
-    if not Path(path).exists():
-        return []
-    with open(path, newline="", encoding="utf-8") as f:
-        return list(csv.DictReader(f))
+    return store.read_csv(path)
 
 
 def _write_runs(path, rows):
-    with open(path, "w", newline="", encoding="utf-8") as f:
-        writer = csv.DictWriter(f, RUN_COLUMNS)
-        writer.writeheader()
-        writer.writerows(rows)
+    store.write_csv(path, RUN_COLUMNS, rows)
 
 
 def _ask(url, prompt, temperature=None):
@@ -171,27 +166,24 @@ def run_tests(case_dir, test_ids=None, repeats=3):
 
     lock = Lock()
     errors = [0]
-    with open(runs_path, "a", newline="", encoding="utf-8") as f:
-        writer = csv.DictWriter(f, RUN_COLUMNS)
+    def run_one(pair):
+        nonlocal next_number
+        test, repeat, temperature = pair
+        outcome = _ask(url, test["prompt"], temperature)
+        with lock:
+            run_id = f"R-{next_number:03d}"
+            next_number += 1
+            # Each answer is stored the moment it arrives, so the live feed and a resume both see it.
+            store.add_rows(case_dir, "runs", [{"timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                                               "run_id": run_id, "test_id": test["test_id"], "repeat": repeat,
+                                               **outcome}])
+            if outcome["error"]:
+                errors[0] += 1
+                audit.log(case_dir, ACTOR, "run_error", run_id=run_id,
+                          test_id=test["test_id"], error=outcome["error"])
 
-        def run_one(pair):
-            nonlocal next_number
-            test, repeat, temperature = pair
-            outcome = _ask(url, test["prompt"], temperature)
-            with lock:
-                run_id = f"R-{next_number:03d}"
-                next_number += 1
-                writer.writerow({"timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                                 "run_id": run_id, "test_id": test["test_id"], "repeat": repeat,
-                                 **outcome})
-                f.flush()
-                if outcome["error"]:
-                    errors[0] += 1
-                    audit.log(case_dir, ACTOR, "run_error", run_id=run_id,
-                              test_id=test["test_id"], error=outcome["error"])
-
-        with ThreadPoolExecutor(max_workers=workers) as pool:
-            list(pool.map(run_one, pairs))
+    with ThreadPoolExecutor(max_workers=workers) as pool:
+        list(pool.map(run_one, pairs))
 
     digest = hashlib.sha256(runs_path.read_bytes()).hexdigest()
     audit.log(case_dir, ACTOR, "run_finished", added=len(pairs), skipped=skipped, errors=errors[0],

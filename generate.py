@@ -30,6 +30,7 @@ from pathlib import Path
 
 import audit
 import llm
+import store
 
 ROOT = Path(__file__).resolve().parent
 RISKS_FILE = ROOT / "risks.json"
@@ -153,13 +154,12 @@ def _now():
 
 
 def _read_csv(path):
-    if not Path(path).exists():
-        return []
-    with open(path, newline="", encoding="utf-8") as f:
-        return list(csv.DictReader(f))
+    return store.read_csv(path)
 
 
 def _write_csv(path, columns, rows):
+    if store._table(path):
+        return store.write_csv(path, columns, rows)
     with open(path, "w", newline="", encoding="utf-8") as f:
         writer = csv.DictWriter(f, columns)
         writer.writeheader()
@@ -175,10 +175,10 @@ def _case_name(case_dir):
 
 
 def _load_results(case_dir):
-    path = Path(case_dir, "results.json")
-    if not path.exists():
-        raise FileNotFoundError(f"{path} does not exist: run analyze.py first")
-    return json.loads(path.read_text(encoding="utf-8"))
+    saved = store.results(case_dir)
+    if saved is None:
+        raise FileNotFoundError(f"{case_dir} has no analysis yet: run analyze.py first")
+    return saved
 
 
 def _next_id(rows, column, prefix):
@@ -539,7 +539,7 @@ def generate(case_dir, per_risk=4):
     audit.log(case_dir, ACTOR, "generate_finished", tests=len(rows) + len(rephrased),
               regression=len(regressions), rephrase=len(rephrased),
               dropped=dict(dropped), archived_runs=archived, suite=str(_suite_path(case_dir)),
-              results_json_now_stale=Path(case_dir, "results.json").exists(), llm_usage=llm.usage())
+              results_now_stale=store.results(case_dir) is not None, llm_usage=llm.usage())
     return _read_csv(Path(case_dir, "tests.csv"))
 
 

@@ -13,6 +13,7 @@ import csv
 import hashlib
 import json
 import os
+import sqlite3
 import re
 import threading
 import time
@@ -23,6 +24,8 @@ from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse, HTMLResponse, PlainTextResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
+
+import store
 
 SESSIONS = Path("data/sessions")
 PAGE = Path("static/index.html")
@@ -86,10 +89,7 @@ def clean(error):
 
 
 def read_rows(path):
-    if not path.exists():
-        return []
-    with open(path, newline="", encoding="utf-8") as f:
-        return list(csv.DictReader(f))
+    return store.read_csv(path)
 
 
 def read_target(path):
@@ -143,7 +143,7 @@ def list_cases():
         answer = path / "answer.txt"
         result.append({"name": name, "answer": answer.read_text(encoding="utf-8").strip()
                        if answer.exists() else "No answer key for this case.",
-                       "analyzed": (path / "results.json").exists()})
+                       "analyzed": bool(store.history(path))})
     return result
 
 
@@ -211,11 +211,11 @@ def get_evidence(case: str, test: str):
 @app.get("/api/report", response_class=PlainTextResponse)
 def get_report(case: str):
     """The last saved report, so the page shows something at once, even offline."""
-    path = folder(case) / "report.md"
-    if not path.exists():
+    text = store.report(folder(case))
+    if not text:
         return "No report yet. Press Run analysis."
     from redact import redact  # reports written before D14 are redacted here
-    return redact(path.read_text(encoding="utf-8"), read_target(folder(case)))
+    return redact(text, read_target(folder(case)))
 
 
 @app.post("/api/analyze", response_class=PlainTextResponse)
@@ -254,7 +254,7 @@ def watch(job, path):
                 if any(re.search("vote|decid|decision|verdict", entry["action"], re.I)
                        for entry in audit.read(path)[job["_audit"]:]):
                     job["step"], job["detail"] = "deciding", "Three LLM votes, then the code's vetoes."
-        except (OSError, ValueError, KeyError, csv.Error):
+        except (OSError, ValueError, KeyError, csv.Error, sqlite3.Error):
             pass  # a file caught mid-write: read it on the next pass
         job["elapsed_s"] = round(time.time() - job["_start"])
         time.sleep(0.4)
@@ -276,7 +276,7 @@ def fill_answers(job, path):
 
 def fill_results(job, path):
     """The live feed's last step: each new test's call, read from the fresh results."""
-    result = json.loads((path / "results.json").read_text(encoding="utf-8"))
+    result = store.results(path)
     found = {f["id"]: f for f in result["findings"]}
     tests = {t["id"]: t for t in result["tests"]}
     rank = {"critical": 0, "high": 1, "medium": 2, "low": 3}
@@ -403,6 +403,12 @@ def get_monitor(case: str):
     name = folder(case).name
     rows = read_rows(Path("data/monitor", f"{name}.csv")) if Path("data/monitor", f"{name}.csv").exists() else []
     return {"baseline": load_json(Path("data/monitor", f"{name}.baseline.json")), "last": rows[-1] if rows else {}}
+
+
+@app.get("/api/db")
+def get_db(case: str):
+    """What the database holds: row counts, each case's current analysis, and this case's history."""
+    return {**store.summary(), "history": store.history(folder(case))}
 
 
 @app.get("/api/calibration")
