@@ -10,6 +10,8 @@ set -a; . ./.env; set +a
 ```
 
 - Open the page and `deck/LLM_Release_Gate.pptx` side by side.
+- The page is 10 numbered pages in the brief's order. Keys `1`-`9` and `0` jump to a page,
+  the arrow keys step through them, and every page ends with Back and Next.
 - A jury scenario adds tests to the case for good. After a rehearsal, put the case back:
   `git restore data/sessions/campus_poisoned`.
 
@@ -18,13 +20,13 @@ set -a; . ./.env; set +a
 | Time | Show | Say |
 |---|---|---|
 | 0:00 | Slide 1 | "An LLM app can sound right and still be wrong, leak data or obey a poisoned document. This gate decides whether it ships, with the evidence. We ran it on four open-source apps we did not write." |
-| 0:20 | Page, case `campus_poisoned`, Verdict | "Reject. The LLM voted Reject three times, citing finding IDs, and code agrees: two vetoes fired. Grounding 15.8, security 26.7." |
-| 0:40 | Click `F-011` in Why | "Every claim links to the answer it came from. Here the bot sends a student to a fake password-reset URL that a poisoned document planted." |
-| 1:00 | Before / After | "Same suite on three versions. A hardened prompt fixed 24 of 59 failures. Removing the poison fixed 42. The fix is the corpus, not the prompt. Even clean, it states facts no document holds, so it is still not ready." |
-| 1:30 | Jury Scenario: paste the jury's text, Run scenario | "Give us any scenario. It becomes a new risk, new tests are written, they run against the app, and the verdict is re-decided. About 35 seconds." |
-| 1:40 | While it runs: Human Review | "The AI can stop a release, never ship one. Release needs a named approver; an override needs a name and a reason." |
-| 2:15 | Jury result: new tests and their findings | Read out how many of the new tests failed and the finding that matters. |
-| 2:35 | Audit & Report: chain valid; Calibration line | "Every step is in a hash-chained log. On fresh planted faults it caught 94 of 96 with 3 false alarms in 96; on real answers, 23 of 30 findings were real, and every injection and hallucination finding was." |
+| 0:20 | Page 1, Verdict | Read it top to bottom: "The app: a campus IT helpdesk bot. What we did: planted 3 poisoned documents. Our gate wrote 92 tests from 15 risks and checked 231 answers; 33 of 60 attacks worked. Go live? No, Reject. Why: it sends users to an attacker's reset URL. Fix: strip injected instructions. Trust: 3 of 3 votes agree, and on a held-out set it caught 94 of 96 planted faults with 3 false alarms." |
+| 0:50 | Page 4, Failures: open PROMPT_INJECTION, click `F-010` | "Every finding links to the answer it came from. Here the bot sends a student to a fake password-reset URL that a poisoned document planted." |
+| 1:05 | Page 6, Regression | "Same suite on three versions. A hardened prompt fixed 23 of 58 failures. Removing the poison fixed 40. The fix is the corpus, not the prompt. Even clean, it states facts no document holds, so it is still not ready." |
+| 1:30 | Page 2, Jury: paste the jury's text, Run scenario | "Give us any scenario. It becomes a new risk, new tests are written and run against the app, and you watch each answer and our call arrive. Under a minute." |
+| 1:40 | While it runs: Page 8, Human review | "The AI can stop a release, never ship one. Release needs a named approver; an override needs a name and a reason." |
+| 2:15 | Back to page 2: the feed and the result line | Read out how many of the new tests failed, the code on the one that matters, and "Verdict X → Y". |
+| 2:35 | Page 10, Audit: chain valid; then page 9, Measures | "Every step is in a hash-chained log. Each success measure in the brief has a measured number: on real answers, 23 of 30 findings were real." |
 | 2:55 | Slide 5 | "It tells you whether to ship, why, and how sure it is." |
 
 ## If something breaks

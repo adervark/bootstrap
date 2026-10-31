@@ -201,3 +201,26 @@ to use if a juror asks. Newest last.
   changes the verdict only through its new answers, not through the LLM judge's noise.
 - If asked: "Only new answers are judged. A hash of the code is in the key, so a fixed
   check can never be served a stale result."
+
+## D17. The page: one answer first, terminal style throughout, numbered pages (user)
+
+- User feedback, in order: "too busy", "no clear cut value proposition", the brief's
+  words must be on the page verbatim, "they dont know whats rejecting what", the text
+  does not follow terminal conventions, "the THEME ISNT UNIFORMLY APPLIED", "the scroll
+  feels cheap". User chose "Answer + scorecard" and then "Numbered screens".
+- Page 1 answers first, as label/value rows: APP, SETUP (what was done to it), OUR GATE
+  (risks, tests, answers checked, attacks that worked), GO LIVE?, WHY, FIX, TRUST. WHY
+  and FIX come from the LLM vote (`decision.headline`, `decision.fix`, at most 20 words
+  each, no finding IDs); without a vote, the code's own one-line reason stands.
+- One set of parts on every page: grey caps labels, white values, numbers and IDs in
+  mono, categories (severity, origin, verdict, pass/fail) in mono caps coloured only by
+  meaning, red only for a failure. Four type sizes: 12 px labels, 13 px mono, 14 px text,
+  one 40 px verdict. No bordered chips, no bullets, no sentence in mono.
+- Ten pages in the brief's order (Verdict, Jury, Why, Failures, Tests, Regression,
+  Monitoring, Human review, Measures, Audit), one at a time. Each opens with its verbatim
+  title and one line saying what it proves, and ends with Back and Next. Keys 1-9 and 0,
+  arrows, and every in-page link (pipeline strip, finding and test IDs) switch pages.
+- The jury page shows the run live: each new test, the app's answer and the gate's call
+  appear as they happen (`job.feed`, filled by app.py from runs.csv and the analysis).
+- Proof: a live jury run in a browser, 48 s, 5 new tests, 5 failed, Reject held; every
+  page fits 1440x900 except Tests (45 px over); the page self-test passes 15 of 15.

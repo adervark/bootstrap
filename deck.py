@@ -316,8 +316,8 @@ def build():
                                                             f"{codes['campus_clean'].count('UNSUPPORTED_CLAIM')} claims no document holds.", {"color": MUTED})]]
     d.text(0.6, 4.75, 6.1, 2.2, findings, size=14, after=8)
     h = d.image("deck/ui_campus_poisoned.png", 7.0, 1.7, 5.73, crop_bottom=0.36)
-    d.text(7.0, 1.8 + h, 5.73, 0.75, "The release page on stage 1: the verdict, six scores, three votes, the vetoes that fired, "
-           "and every finding linked to the answer it came from.", size=12, color=MUTED)
+    d.text(7.0, 1.8 + h, 5.73, 0.75, "The release page on stage 1: what was tested, the verdict, why, the fix, how far to trust it, "
+           "and the six scores. Every finding below links to the answer it came from.", size=12, color=MUTED)
 
     # 4. Dynamic adaptation
     jury_line = (f"Dry run: {jury['tests']} new tests, {jury['answers']} answers, re-decided in {jury['seconds']} s."
