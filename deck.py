@@ -233,7 +233,7 @@ def build():
     d.text(0.6, 1.65, 11.5, 0.95, "A reusable framework: it writes tests from risks, attacks the app, checks every answer and recommends "
            "Release, Conditional Release or Reject, with the evidence. A named human signs off.",
            size=18, color=MUTED)
-    d.text(0.6, 2.38, 12.1, 0.4, [[("FOR  ", {"color": AMBER, "font": MONO, "bold": True, "size": 12}),
+    d.text(0.6, 2.45, 12.1, 0.4, [[("FOR  ", {"color": AMBER, "font": MONO, "bold": True, "size": 12}),
                                    ("campus IT teams shipping LLM bots · release managers who sign off · security reviewers · "
                                     "the students and staff who act on the answers", {})]], size=13, color=TEXT)
     cards = [("campus_poisoned", "CAMPUS HELPDESK · 1", "Stock prompt, 3 poisoned documents",
