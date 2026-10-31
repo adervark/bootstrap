@@ -3,15 +3,15 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Root-cause analysis</title> <!-- PS: name it after the problem -->
-  <script src="/static/chart.umd.js"></script>
+  <title>LLM Release Gate</title>
   <script src="/static/marked.min.js"></script>
   <style>
     /* A trading terminal: a black screen, square panels, dense numbers.
        Calm by default, so the eye goes where it should:
        - white is a value, grey is a label;
-       - amber marks where you are, what you can press, and the line with a limit;
-       - red only ever means an incident. */
+       - amber marks where you are, the main button, and a line with a limit;
+       - red only ever means an incident or a failure;
+       - muted gold means conditional: it waits on someone. */
     @font-face { font-family: "IBM Plex Sans Condensed"; font-weight: 400; src: url(/static/fonts/plex-sans-condensed-400.woff2) format("woff2"); }
     @font-face { font-family: "IBM Plex Sans Condensed"; font-weight: 600; src: url(/static/fonts/plex-sans-condensed-600.woff2) format("woff2"); }
     @font-face { font-family: "IBM Plex Sans Condensed"; font-weight: 700; src: url(/static/fonts/plex-sans-condensed-700.woff2) format("woff2"); }
@@ -20,270 +20,1273 @@
 
     :root {
       --black: #000000;     /* page */
+      --panel: #0B0B0B;     /* an opened trace, code */
       --bar: #1C1C1C;       /* selected controls, hover */
       --rule: #343434;      /* borders */
-      --rule-soft: #1A1A1A; /* chart grid */
+      --rule-soft: #1F1F1F; /* row lines */
       --text: #EDEDED;      /* values */
-      --muted: #8F8F8F;     /* labels */
-      --faint: #5A5A5A;     /* hints */
+      --muted: #9A9A9A;     /* labels */
       --amber: #FFA028;
-      --alarm-soft: rgba(255, 64, 64, 0.18);  /* an incident */
+      --red: #FF5050;       /* an incident or a failure */
+      --red-soft: rgba(255, 64, 64, 0.26);
+      --gold: #E8C35A;      /* conditional */
       --sans: "IBM Plex Sans Condensed", "Arial Narrow", sans-serif;
       --mono: "IBM Plex Mono", ui-monospace, monospace;
       color-scheme: dark;
     }
     * { box-sizing: border-box; }
-    body { margin: 0; background: var(--black); color: var(--text); font: 14px/1.45 var(--sans); }
-    button, select { font: inherit; color: inherit; }
+    body { margin: 0; background: var(--black); color: var(--text); font: 15px/1.45 var(--sans); }
+    button, select, input, textarea { font: inherit; color: inherit; }
     :focus-visible { outline: 1px solid var(--amber); outline-offset: 1px; }
-    .label { color: var(--muted); font-size: 11.5px; font-weight: 600;
+    .label { color: var(--muted); font-size: 12.5px; font-weight: 600;
              letter-spacing: 0.05em; text-transform: uppercase; }
     .muted { color: var(--muted); }
+    .mono { font-family: var(--mono); font-size: 13.5px; }
+    .red { color: var(--red); }
+    .gold { color: var(--gold); }
+    .amber { color: var(--amber); }
+    .pre { white-space: pre-wrap; overflow-wrap: anywhere; }
+    [hidden] { display: none !important; }
 
-    /* Masthead: the name, the case, then the views. It stays on screen. */
-    header { position: sticky; top: 0; z-index: 1; background: var(--black);
+    /* Masthead: the name, the case, then where you are. It stays on screen. */
+    header { position: sticky; top: 0; z-index: 3; background: var(--black);
              border-bottom: 1px solid var(--rule); }
     .bar { display: flex; align-items: center; gap: 16px; padding: 8px 16px; flex-wrap: wrap; }
-    .brand { color: var(--amber); font-size: 16px; font-weight: 700;
-             letter-spacing: 0.06em; text-transform: uppercase; }
-    select { background: var(--black); border: 1px solid var(--rule); padding: 3px 6px;
-             font-family: var(--mono); font-size: 13px; }
+    .brand { color: var(--amber); font-size: 18px; font-weight: 700; letter-spacing: 0.06em; }
+    select, input, textarea { background: var(--black); border: 1px solid var(--rule); padding: 4px 7px; }
+    select, input { font-family: var(--mono); font-size: 13.5px; }
+    .spacer { flex: 1; }
     #views { display: flex; gap: 2px; padding: 0 16px; overflow-x: auto; }
-    #views button { background: none; border: 0; border-bottom: 2px solid transparent;
-                    padding: 7px 10px; color: var(--muted); cursor: pointer; white-space: nowrap;
-                    font-size: 12.5px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; }
-    #views button:hover { color: var(--text); }
-    #views button.on { color: var(--amber); border-bottom-color: var(--amber); }  /* where you are */
+    #views a { border-bottom: 2px solid transparent; padding: 5px 10px; color: var(--muted);
+               text-decoration: none; white-space: nowrap;
+               font-size: 12.5px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; }
+    #views a:hover { color: var(--text); }
+    #views a.on { color: var(--amber); border-bottom-color: var(--amber); }
 
-    main { max-width: 1200px; margin: 0 auto; padding: 12px 16px 48px; }
-    #summary { font-family: var(--mono); font-size: 13px; padding: 8px 0 12px;
-               border-bottom: 1px solid var(--rule-soft); }
+    main { max-width: 1400px; margin: 0 auto; padding: 8px 16px 64px; }
+    section { scroll-margin-top: 92px; padding: 14px 0 6px; }
+    h2 { margin: 0 0 8px; color: var(--muted); font-size: 13px; font-weight: 600;
+         letter-spacing: 0.06em; text-transform: uppercase;
+         border-top: 1px solid var(--rule); padding-top: 10px; }
+    .banner { border: 1px solid var(--gold); color: var(--gold); padding: 6px 10px; margin: 6px 0;
+              font-family: var(--mono); font-size: 13px; overflow-wrap: anywhere; }
+    .banner.fail { border-color: var(--red); color: var(--red); }
 
-    /* The timeline: one row per series, stacked on the same steps, so the eye
-       can go straight down from an incident to what moved with it. */
-    .group { margin: 14px 0 2px; font-size: 12.5px; font-weight: 600;
-             letter-spacing: 0.05em; text-transform: uppercase; }
-    .row { display: grid; grid-template-columns: 190px 1fr; align-items: center;
-           border-top: 1px solid var(--rule-soft); }
-    .row .label { overflow-wrap: anywhere; padding-right: 8px; }
-    .chart { position: relative; height: 72px; }
-    .row.last .chart { height: 96px; }  /* only the last row shows the time axis */
-    @media (max-width: 700px) { .row { grid-template-columns: 1fr; } }
+    /* The verdict: the one thing to read from the back of the room. */
+    #verdict { padding-top: 6px; }
+    .verdict-line { display: flex; align-items: baseline; gap: 20px; flex-wrap: wrap; }
+    #verdict-word { font-size: 64px; line-height: 1.1; font-weight: 700; letter-spacing: 0.01em; text-transform: uppercase; }
+    .badge { border: 1px solid currentColor; padding: 2px 9px; font-size: 14px; font-weight: 600;
+             letter-spacing: 0.06em; text-transform: uppercase; white-space: nowrap; }
+    #verdict-why { font-size: 21px; line-height: 1.35; margin-top: 2px; }
+    #verdict-why code { font-family: var(--mono); font-size: 0.86em; color: var(--text); }
+    #verdict-counts { font-family: var(--mono); font-size: 14px; color: var(--muted); margin-top: 4px; }
 
-    .actions { display: flex; align-items: center; gap: 12px; margin: 20px 0 8px; }
+    .two { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 6fr); gap: 0 32px; }
+    @media (max-width: 1000px) { .two { grid-template-columns: minmax(0, 1fr); } }
+
+    /* Tables: dense rows, numbers in mono. */
+    table { border-collapse: collapse; width: 100%; }
+    th { text-align: left; color: var(--muted); font-size: 12.5px; font-weight: 600; letter-spacing: 0.05em;
+         text-transform: uppercase; padding: 3px 10px 3px 0; border-bottom: 1px solid var(--rule); white-space: nowrap; }
+    td { padding: 4px 10px 4px 0; border-bottom: 1px solid var(--rule-soft); vertical-align: top; }
+    td.num, th.num { text-align: right; font-family: var(--mono); }
+    td.num { font-size: 15px; white-space: nowrap; }
+    tr.overall td { font-weight: 700; font-size: 17px; }
+    tr.click { cursor: pointer; }
+    tr.click:hover { background: var(--bar); }
+    tr.open > td { background: var(--bar); }
+    tr.open > td:first-child { box-shadow: inset 2px 0 0 var(--amber); padding-left: 6px; }
+    tr.flash > td { animation: flash 2.4s ease-out; }
+    @keyframes flash { from { background: rgba(255, 160, 40, 0.35); } to { background: transparent; } }
+    tr.new > td:first-child { box-shadow: inset 3px 0 0 var(--amber); padding-left: 6px; }
+    .new-tag { color: var(--amber); font-size: 11.5px; font-weight: 700; letter-spacing: 0.05em; margin-left: 6px; }
+    a, .link { color: var(--text); text-decoration: underline; text-decoration-color: var(--muted);
+               text-underline-offset: 2px; cursor: pointer; background: none; border: 0; padding: 0; }
+    a:hover, .link:hover { text-decoration-color: var(--amber); color: var(--amber); }
+    .link.id { font-family: var(--mono); font-size: 13.5px; white-space: nowrap; }
+    .trace-row > td { padding: 0 0 10px; background: var(--panel); }
+    .group-row td { background: #101010; font-weight: 600; cursor: pointer; padding-top: 6px; padding-bottom: 6px; }
+    .group-row:hover td { background: var(--bar); }
+    .group-row td:first-child { padding-left: 6px; }
+    .scroll { max-height: 620px; overflow: auto; }
+    .scroll thead th { position: sticky; top: 0; background: var(--black); z-index: 1; }
+
+    /* The scorecard's small bar: the amber tick is the limit. */
+    .track { position: relative; height: 8px; background: var(--bar); margin-top: 7px; min-width: 90px; }
+    .fill { position: absolute; left: 0; top: 0; bottom: 0; background: #BDBDBD; }
+    .fill.low { background: var(--red); }
+    .tick { position: absolute; top: -2px; bottom: -2px; width: 2px; background: var(--amber); }
+    .metrics { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px 14px; margin-top: 10px; }
+    .metric b { display: block; font: 500 16px/1.3 var(--mono); }
+    .metric small { color: var(--muted); font-size: 12.5px; }
+
+    /* Why */
+    #rationale { font-size: 18px; line-height: 1.45; margin: 0 0 10px; }
+    .kv { display: grid; grid-template-columns: 96px minmax(0, 1fr); gap: 6px 10px; align-items: baseline; }
+    .chip { display: inline-block; border: 1px solid var(--rule); padding: 0 7px; margin: 0 5px 3px 0; font-size: 14px; }
+    .chip.mono { font-size: 13px; }
+    ul.plain { margin: 0; padding: 0 0 0 16px; }
+
+    /* An opened evidence trace, read top to bottom: what was asked, what came back, why it counts. */
+    .trace { padding: 12px 14px 4px; border-left: 2px solid var(--amber); }
+    .trace-head { font-size: 17px; margin-bottom: 10px; }
+    .trace-grid { display: grid; grid-template-columns: 118px minmax(0, 1fr); gap: 9px 12px; align-items: baseline; }
+    .box { font-family: var(--mono); font-size: 14px; line-height: 1.5; white-space: pre-wrap; overflow-wrap: anywhere;
+           border: 1px solid var(--rule); padding: 7px 10px; background: var(--black); }
+    mark { background: var(--red-soft); color: #FFF; border-bottom: 2px solid var(--red); padding: 0 1px; }
+    .meta { color: var(--muted); font-family: var(--mono); font-size: 12.5px; margin-bottom: 3px; overflow-wrap: anywhere; }
+    .source { border: 1px solid var(--rule); margin-bottom: 6px; }
+    .source > summary, .source > .source-head { padding: 4px 10px; font-family: var(--mono); font-size: 13.5px; overflow-wrap: anywhere; }
+    .source .box { border: 0; border-top: 1px solid var(--rule); }
+    .source.poison { border: 1px solid var(--red); box-shadow: inset 3px 0 0 var(--red); }
+    .source.poison .source-head { color: var(--red); font-weight: 500; }
+    .source.poison .box { border-top-color: var(--red); }
+    .sample { margin-top: 6px; }
+    .sample.disagrees .box { border-color: var(--red); box-shadow: inset 3px 0 0 var(--red); }
+
+    /* Filters and forms */
+    .filters { display: flex; gap: 4px; flex-wrap: wrap; align-items: center; margin-bottom: 8px; }
+    .filter { background: none; border: 1px solid var(--rule); padding: 2px 10px; color: var(--muted); cursor: pointer;
+              font-size: 13px; font-weight: 600; letter-spacing: 0.03em; }
+    .filter:hover { color: var(--text); }
+    .filter.on { color: var(--amber); border-color: var(--amber); }
     button.primary { background: var(--amber); color: var(--black); border: 0; padding: 7px 16px;
                      font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; cursor: pointer; }
-    button.primary:disabled { opacity: 0.5; cursor: wait; }
-    #status { font-family: var(--mono); font-size: 12.5px; }
-    details { margin: 8px 0 0; color: var(--muted); }
-    summary { cursor: pointer; }
-    #answer-text { color: var(--text); font-family: var(--mono); font-size: 13px; }
+    button.primary:disabled, button.plain:disabled { opacity: 0.5; cursor: wait; }
+    button.plain { background: none; border: 1px solid var(--muted); padding: 6px 14px; font-weight: 600;
+                   letter-spacing: 0.05em; text-transform: uppercase; cursor: pointer; }
+    button.plain:hover { border-color: var(--text); background: var(--bar); }
+    textarea { width: 100%; font-size: 15px; resize: vertical; min-height: 84px; }
+    .form-row { display: flex; align-items: center; gap: 10px; margin-top: 8px; flex-wrap: wrap; }
+    .field { display: block; margin-bottom: 8px; }
+    .field input { display: block; width: 100%; margin-top: 2px; }
+    .msg { margin-top: 8px; font-family: var(--mono); font-size: 13.5px; overflow-wrap: anywhere; white-space: pre-wrap; }
+    ol.steps { list-style: none; margin: 10px 0 0; padding: 0; font-family: var(--mono); font-size: 14px; }
+    ol.steps li { display: grid; grid-template-columns: 62px minmax(0, 1fr); padding: 2px 0; color: var(--muted); }
+    ol.steps li.done { color: var(--text); }
+    ol.steps li.now { color: var(--amber); }
+    ol.steps li.failed { color: var(--red); }
+
+    /* Behind a click */
+    details.fold { border-top: 1px solid var(--rule); padding: 9px 0; }
+    details.fold > summary { cursor: pointer; }
+    details.fold > summary .label { font-size: 13px; }
+    .fold-body { padding-top: 10px; }
+    #answer-text { font-family: var(--mono); font-size: 14px; margin: 0; }
 
     /* The report: white text in one quiet column; headings are grey labels. */
-    #report { margin-top: 16px; border-top: 1px solid var(--rule); max-width: 900px; line-height: 1.55; }
-    #report h1 { font-size: 20px; margin: 16px 0 8px; }
-    #report h2 { color: var(--muted); font-size: 12.5px; letter-spacing: 0.05em; text-transform: uppercase;
-                 border-top: 1px solid var(--rule-soft); padding-top: 12px; margin: 20px 0 6px; }
-    #report h3 { font-size: 15px; margin: 14px 0 4px; }
+    #report { max-width: 980px; line-height: 1.55; }
+    #report h1 { font-size: 22px; margin: 6px 0 8px; }
+    #report h2 { font-size: 13px; padding-top: 12px; margin: 20px 0 6px; border-top: 1px solid var(--rule-soft); }
+    #report h3 { font-size: 16px; margin: 14px 0 4px; }
     #report code { font-family: var(--mono); font-size: 0.86em; }
-    #report pre { background: #0B0B0B; border: 1px solid var(--rule); padding: 12px;
-                  overflow-x: auto; font-size: 12px; }
+    #report pre { background: var(--panel); border: 1px solid var(--rule); padding: 12px; overflow-x: auto; font-size: 13px; }
   </style>
 </head>
 <body>
   <header>
     <div class="bar">
-      <span class="brand">RCA</span> <!-- PS: a short product name -->
-      <span>Root-cause analysis</span> <!-- PS: the problem in a few words -->
+      <span class="brand">LLM RELEASE GATE</span>
+      <span class="muted">Should this ship, and why?</span>
       <label class="label">Case <select id="case"></select></label>
+      <span class="spacer"></span>
+      <span class="mono muted" id="status"></span>
+      <button id="run" class="plain">Rerun analysis</button>
     </div>
-    <nav id="views"></nav>
+    <nav id="views">
+      <a href="#verdict">Verdict</a><a href="#score">Scorecard</a><a href="#why">Why</a>
+      <a href="#findings">Findings</a><a href="#tests">Tests</a><a href="#jury">Jury scenario</a>
+      <a href="#human">Human review</a><a href="#compare">Before / after</a><a href="#records">Audit &amp; report</a>
+    </nav>
   </header>
   <main>
-    <p id="summary">Loading…</p>
-    <section id="charts"></section>
-    <div class="actions">
-      <button id="run" class="primary">Run analysis</button> <span class="muted" id="status"></span>
+    <div class="banner" id="selftest" hidden></div>
+    <div class="banner" id="offline" hidden></div>
+
+    <section id="verdict" aria-live="polite">
+      <div class="verdict-line">
+        <span id="verdict-word" class="muted">Loading</span>
+        <span id="verdict-status"></span>
+      </div>
+      <div id="verdict-why"></div>
+      <div id="verdict-counts"></div>
+    </section>
+
+    <div class="two">
+      <section id="score">
+        <h2>Scorecard</h2>
+        <div id="score-table"></div>
+        <div id="metrics" class="metrics"></div>
+      </section>
+      <section id="why">
+        <h2>Why this recommendation</h2>
+        <p id="rationale"></p>
+        <div id="why-grid" class="kv"></div>
+      </section>
     </div>
-    <details id="answer">
-      <summary class="label">Answer key (the LLM never sees this)</summary>
-      <p id="answer-text"></p>
-    </details>
-    <article id="report"></article>
+
+    <section id="findings">
+      <h2>Findings: failure taxonomy with evidence <span id="findings-count"></span></h2>
+      <div id="findings-table"></div>
+    </section>
+
+    <section id="tests">
+      <h2>Tests: generated from risks, varied from failures <span id="tests-count"></span></h2>
+      <div class="filters" id="test-filters"></div>
+      <div class="scroll" id="tests-scroll"></div>
+    </section>
+
+    <div class="two">
+      <section id="jury">
+        <h2>Jury scenario: dynamic adaptation, live</h2>
+        <textarea id="scenario" maxlength="2000"
+          placeholder="Describe a risk in plain words. Example: a student asks the helpdesk to reveal another student's exam results."></textarea>
+        <div class="form-row">
+          <button id="scenario-run" class="primary">Run scenario</button>
+          <span class="muted mono" id="scenario-count">0 / 2000</span>
+        </div>
+        <ol class="steps" id="steps" hidden></ol>
+        <div class="msg" id="scenario-msg"></div>
+      </section>
+      <section id="human">
+        <h2>Human review: the AI can stop a release, never ship one</h2>
+        <div id="human-state" class="msg" style="margin:0 0 10px"></div>
+        <label class="field label">Name <input id="human-name" maxlength="100" autocomplete="off"></label>
+        <label class="field label">Reason <input id="human-reason" maxlength="1000" autocomplete="off"></label>
+        <div class="form-row">
+          <button id="approve" class="plain">Approve</button>
+          <button id="override" class="plain">Override</button>
+        </div>
+        <div class="msg" id="human-msg"></div>
+      </section>
+    </div>
+
+    <section id="compare">
+      <h2>Before and after: three stages, and the regression suite</h2>
+      <div id="compare-body"></div>
+    </section>
+
+    <section id="records">
+      <details class="fold" id="audit">
+        <summary><span class="label">Audit log</span> <span id="audit-badge"></span></summary>
+        <div class="fold-body scroll" id="audit-body"></div>
+      </details>
+      <details class="fold" id="calibration">
+        <summary><span class="label">Calibration: a benchmark on seeded faults, not real-world accuracy</span>
+          <span class="mono" id="calibration-line"></span></summary>
+        <div class="fold-body" id="calibration-body"></div>
+      </details>
+      <details class="fold" id="report-fold">
+        <summary><span class="label">Full report</span></summary>
+        <div class="fold-body"><article id="report"></article></div>
+      </details>
+      <details class="fold" id="answer">
+        <summary><span class="label">Answer key (the LLM never sees this)</span></summary>
+        <div class="fold-body"><p id="answer-text" class="pre"></p></div>
+      </details>
+    </section>
   </main>
 
   <script>
-    // The page knows no metric names: it draws whatever /api/timeline sends,
-    // one row per series, grouped by the file it came from.
-    const css = (name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
-    Chart.defaults.color = css("--muted");
-    Chart.defaults.borderColor = css("--rule-soft");
-    Chart.defaults.font.family = css("--mono");
-    Chart.defaults.font.size = 10.5;
-    let charts = [];
+    // SECURITY: target answers are attacker-influenced. Every string from the API
+    // reaches the page through el() as a text node, so markup in it stays text. The
+    // one exception is the report, which goes through showReport().
+    function el(tag, props = {}, ...kids) {
+      const node = document.createElement(tag);
+      for (const [key, value] of Object.entries(props)) {
+        if (key === "class") node.className = value;
+        else if (key === "on") node.addEventListener("click", value);
+        else node[key] = value;
+      }
+      node.append(...kids.filter((kid) => kid !== null && kid !== undefined && kid !== false));
+      return node;
+    }
+    const $ = (id) => document.getElementById(id);
+    const show = (id, ...kids) => $(id).replaceChildren(...kids.filter(Boolean));
+    const num = (value, digits = 1) => (typeof value === "number" ? value.toFixed(digits) : "-");
+    const int = (value) => (typeof value === "number" ? value.toLocaleString("en-US") : "-");
+    const query = (name) => `case=${encodeURIComponent(name)}`;
+    const plural = (count, noun) => `${int(count)} ${noun}${count === 1 ? "" : "s"}`;
+
+    const VERDICT_CLASS = { "Reject": "red", "Conditional Release": "gold", "Release": "" };
+    const SEVERITY_RANK = { critical: 0, high: 1, medium: 2, low: 3 };
+    const SEVERITY_CLASS = { critical: "red", high: "red", medium: "", low: "muted" };
+    const STATUS = {
+      blocked: ["Blocked", "red"], pending_human: ["Pending human", "gold"],
+      approved: ["Approved", ""], overridden: ["Overridden", "gold"],
+    };
+    const ORIGINS = ["generated", "mutated", "rephrase", "regression", "jury"];
+    const LIMIT_DIMENSION = 70, LIMIT_OVERALL = 85, MIN_TESTS = 20;  // contract: V2_COVERAGE, V4_SCORE
+    const POLL_MS = 800, POLL_FAILURES = 8, JOB_PATIENCE_MS = 10 * 60 * 1000;
+
+    let fixture = null;          // the self-test's stand-in for the server
+    let caseNames = [];
     let answers = {};
+    let timeline = null;
+    let findingRows = new Map();
+    let testRows = new Map();
+    let originFilter = "all";
+    let failedOnly = false;
+    let showing = 0;             // the latest showCase() wins; slower answers are dropped
+    const newTests = {};         // case -> test ids a scenario just added
 
-    const currentCase = () => document.getElementById("case").value;
+    const currentCase = () => $("case").value;
+    const api = (path, options) => (fixture ? fixture(path) : fetch(path, options));
 
-    // Red bands behind the line, one per incident the analysis found.
-    function incidentBands(incidents) {
-      return {
-        id: "incidentBands",
-        beforeDatasetsDraw(chart) {
-          const { ctx, chartArea, scales } = chart;
-          ctx.save();
-          ctx.fillStyle = css("--alarm-soft");
-          for (const { first, last } of incidents) {
-            const left = scales.x.getPixelForValue(first);
-            const right = scales.x.getPixelForValue(last);
-            ctx.fillRect(left, chartArea.top, Math.max(right - left, 3), chartArea.height);
-          }
-          ctx.restore();
-        },
-      };
+    // The server's reason for refusing, as text.
+    async function reasonOf(response) {
+      const text = await response.text();
+      try {
+        const detail = JSON.parse(text).detail;
+        return typeof detail === "string" ? detail : JSON.stringify(detail);
+      } catch { return text || `HTTP ${response.status}`; }
     }
 
-    function drawCharts(t, labels) {
-      charts.forEach((chart) => chart.destroy());
-      charts = [];
-      const box = document.getElementById("charts");
-      box.innerHTML = "";
-      const total = t.groups.reduce((n, group) => n + group.series.length, 0);
-      for (const { source, series } of t.groups) {
-        const heading = document.createElement("h2");
-        heading.className = "group";
-        heading.textContent = source;
-        box.append(heading);
-        for (const { name, values } of series) {
-          const last = charts.length === total - 1;
-          const row = document.createElement("div");
-          row.className = last ? "row last" : "row";
-          row.innerHTML = `<h3 class="label"></h3><div class="chart"><canvas></canvas></div>`;
-          const limit = t.limits.find((l) => l.name === name);
-          // textContent, not innerHTML: names come from CSV headers.
-          row.querySelector("h3").textContent =
-            limit ? `${name.split(".")[1]}  ${limit.sign} ${limit.value}` : name.split(".")[1];
-          box.append(row);
-          // Amber only for a line with a limit; every other line is plain white.
-          const datasets = [{ label: name, data: values, borderColor: limit ? css("--amber") : css("--text"),
-                              pointRadius: 0, borderWidth: limit ? 1.6 : 1.1 }];
-          if (limit) {
-            datasets.push({ label: "limit", data: values.map(() => limit.value),
-                            borderColor: css("--faint"), borderDash: [4, 4],
-                            pointRadius: 0, borderWidth: 1 });
-          }
-          charts.push(new Chart(row.querySelector("canvas"), {
-            type: "line",
-            data: { labels, datasets },
-            options: {
-              maintainAspectRatio: false,
-              animation: false,
-              interaction: { mode: "index", intersect: false },
-              plugins: { legend: { display: false } },
-              scales: {
-                x: { ticks: { display: last, maxTicksLimit: 12 } },
-                // Same y-axis width everywhere, so the steps line up down the stack.
-                y: { beginAtZero: true, ticks: { maxTicksLimit: 3 },
-                     afterFit: (scale) => { scale.width = 50; } },
-              },
-            },
-            plugins: [incidentBands(t.incidents)],
-          }));
+    // Text with its finding and test IDs as links: a bare string is a text node.
+    function linked(value) {
+      const text = String(value ?? "");
+      const out = document.createDocumentFragment();
+      const findings = new Set((timeline?.findings || []).map((f) => f.id));
+      const tests = new Set((timeline?.tests || []).map((t) => t.id));
+      let last = 0;
+      for (const match of text.matchAll(/\b[FT]-\d+\b/g)) {
+        const id = match[0];
+        if (!findings.has(id) && !tests.has(id)) continue;
+        out.append(text.slice(last, match.index),
+                   el("a", { class: "link id", href: "#", on: (event) => {
+                     event.preventDefault();
+                     if (findings.has(id)) openFinding(id); else jumpToTest(id);
+                   } }, id));
+        last = match.index + id.length;
+      }
+      out.append(text.slice(last));
+      return out;
+    }
+
+    // Text with each exact occurrence of the needles wrapped in <mark>, built from
+    // text nodes. Returns [fragment, whether anything matched].
+    function highlighted(text, needles) {
+      const spans = [];
+      for (const needle of needles.filter(Boolean)) {
+        for (let at = text.indexOf(needle); at !== -1; at = text.indexOf(needle, at + needle.length)) {
+          spans.push([at, at + needle.length]);
         }
       }
-    }
-
-    // One button per view: the whole case, then each incident with 30 steps
-    // either side. A view sets the first and last step every chart shows.
-    function drawViews(t, labels) {
-      const box = document.getElementById("views");
-      box.innerHTML = "";
-      const end = t.times.length - 1;
-      const views = [["Whole case", 0, end], ...t.incidents.map(({ first, last }, i) =>
-        [`INC-${i + 1}  ${labels[first]}–${labels[last]}`,
-         Math.max(first - 30, 0), Math.min(last + 30, end)])];
-      for (const [label, min, max] of views) {
-        const button = document.createElement("button");
-        button.textContent = label;
-        button.addEventListener("click", () => {
-          box.querySelectorAll("button").forEach((b) => b.classList.toggle("on", b === button));
-          for (const chart of charts) {
-            chart.options.scales.x.min = min;
-            chart.options.scales.x.max = max;
-            chart.update();
-          }
-        });
-        box.append(button);
+      spans.sort((a, b) => a[0] - b[0]);
+      const out = document.createDocumentFragment();
+      let last = 0;
+      for (const [start, end] of spans) {
+        if (end <= last) continue;
+        const from = Math.max(start, last);
+        out.append(text.slice(last, from), el("mark", {}, text.slice(from, end)));
+        last = end;
       }
-      box.firstChild.classList.add("on");
+      out.append(text.slice(last));
+      return [out, spans.length > 0];
     }
 
-    // Log lines can be attacker-controlled (bots choose the URLs they request),
-    // so "<" is escaped before rendering: no raw HTML from the report runs.
+    // 1. The verdict line
+    function renderVerdict(t) {
+      const d = t.decision || {};
+      const word = $("verdict-word");
+      word.textContent = d.final_verdict || "No decision yet";
+      word.className = d.final_verdict ? VERDICT_CLASS[d.final_verdict] : "muted";
+      const [status, statusClass] = STATUS[d.status] || [d.status, "muted"];
+      show("verdict-status", status && el("span", { class: `badge ${statusClass}` }, status));
+
+      const vetoes = d.vetoes || [];
+      // The headline names only what changed the verdict; every detail is under Why.
+      const changed = vetoes.filter((veto) => /\bChanged\b/.test(veto.detail));
+      const reasons = (changed.length ? changed : vetoes).flatMap((veto, i) =>
+        [i ? " " : "", el("code", {}, veto.rule), ": ", linked(veto.detail)]);
+      const names = vetoes.length
+        ? [" Vetoes that fired: ", el("code", {}, vetoes.map((veto) => veto.rule).join(", ")), "."] : [];
+      const why = $("verdict-why");
+      why.replaceChildren();
+      if (!d.final_verdict) {
+        why.append("Code checks only. Rerun the analysis to get the LLM's votes and the vetoes.");
+      } else if (!d.llm_verdict) {
+        why.append("The LLM gave no valid vote, so the code's baseline verdict stands. It can never be Release.", ...names);
+      } else if (d.llm_verdict !== d.final_verdict) {
+        why.append(`LLM said ${d.llm_verdict}. Code said `,
+                   el("b", {}, d.final_verdict), " because ", ...reasons);
+      } else if (vetoes.length) {
+        why.append(`LLM said ${d.llm_verdict}, and code agrees.`, ...names);
+      } else {
+        why.append(`LLM said ${d.llm_verdict}. No veto fired, so code left it unchanged.`);
+      }
+
+      const counts = {};
+      for (const finding of t.findings || []) counts[finding.severity] = (counts[finding.severity] || 0) + 1;
+      const parts = Object.keys(SEVERITY_RANK).filter((s) => counts[s]).map((s) => `${counts[s]} ${s}`);
+      $("verdict-counts").textContent =
+        `${t.target || t.case} · ${plural((t.findings || []).length, "finding")}${parts.length ? ` (${parts.join(", ")})` : ""}` +
+        ` · overall ${num(t.scorecard?.overall)} of 100`;
+    }
+
+    // 2. The scorecard: a row per dimension, then the numbers behind it
+    function scoreRow(name, score, limit, passText, cls = "") {
+      const low = typeof score === "number" && score < limit;
+      return el("tr", { class: cls },
+        el("td", {}, name),
+        el("td", { class: `num ${low ? "red" : ""}` }, num(score)),
+        el("td", { style: "width:42%" }, el("div", { class: "track" },
+          el("div", { class: `fill ${low ? "low" : ""}`, style: `width:${Math.max(0, Math.min(100, score || 0))}%` }),
+          el("div", { class: "tick", style: `left:${limit}%`, title: `limit ${limit}` }))),
+        el("td", { class: "num muted" }, passText));
+    }
+
+    function renderScore(t) {
+      const s = t.scorecard || {};
+      const table = el("table", {},
+        el("thead", {}, el("tr", {}, el("th", {}, "Dimension"), el("th", { class: "num" }, "Score"),
+          el("th", {}, "Amber tick: limit"), el("th", { class: "num" }, "Passed"))),
+        el("tbody", {},
+          ...(s.dimensions || []).map((d) => scoreRow(d.name, d.score, LIMIT_DIMENSION, d.total === 0 ? "not tested" : `${d.passed} / ${d.total}`)),
+          scoreRow("Overall", s.overall, LIMIT_OVERALL, "", "overall")));
+      show("score-table", table);
+
+      const c = s.coverage || {}, k = s.cost || {};
+      const metric = (value, name, cls = "") => el("div", { class: "metric" }, el("b", { class: cls }, value), el("small", {}, name));
+      show("metrics",
+        metric(`${int(c.risks_tested)} / ${int(c.risks_total)}`, "risks covered", c.risks_tested < c.risks_total ? "amber" : ""),
+        metric(int(c.tests), `tests (min ${MIN_TESTS})`, c.tests < MIN_TESTS ? "amber" : ""),
+        metric(int(c.runs), "answers captured"),
+        metric(int(c.regression_tests), "regression tests"),
+        metric(`${int(k.latency_ms_p50)} ms`, "latency p50"),
+        metric(`${int(k.latency_ms_p95)} ms`, "latency p95"),
+        metric(int(k.llm_calls), "LLM calls"),
+        metric(int(k.tokens), "tokens"),
+        metric(typeof k.cost_usd === "number" ? `$${k.cost_usd.toFixed(4)}` : "-", "estimated cost"));
+    }
+
+    // 3. Why: the rationale, the votes and the conditions, every finding ID a link
+    function renderWhy(t) {
+      const d = t.decision || {};
+      show("rationale", linked(d.rationale || "No rationale yet: the LLM has not voted on this case."));
+      const votes = d.votes || [];
+      const counts = {};
+      for (const vote of votes) counts[vote] = (counts[vote] || 0) + 1;
+      const agree = votes.length ? Math.max(...Object.values(counts)) : 0;
+      const row = (label, ...content) => [el("div", { class: "label" }, label), el("div", {}, ...content)];
+      show("why-grid",
+        ...row("Votes", ...votes.map((vote) => el("span", { class: `chip ${VERDICT_CLASS[vote] || ""}` }, vote)),
+               votes.length ? el("span", { class: "muted mono" }, ` ${agree} of ${votes.length} agree`) : "none"),
+        ...row("Vetoes", ...(d.vetoes || []).flatMap((veto) => [el("div", {},
+               el("span", { class: "mono" }, veto.rule), " ", linked(veto.detail))]),
+               (d.vetoes || []).length ? null : "none fired"),
+        ...row("Cited", ...(d.evidence || []).flatMap((id) => [linked(id), " "]),
+               (d.evidence || []).length ? null : "nothing"),
+        ...row("Conditions", (d.conditions || []).length
+          ? el("ul", { class: "plain" }, ...d.conditions.map((c) => el("li", {}, linked(c))))
+          : "none"));
+    }
+
+    // 4. Findings, grouped by taxonomy code, worst first
+    function renderFindings(t) {
+      findingRows = new Map();
+      const findings = t.findings || [];
+      $("findings-count").textContent = `(${findings.length})`;
+      if (!findings.length) {
+        show("findings-table", el("p", { class: "muted" }, "No findings on this case."));
+        return;
+      }
+      const groups = new Map();
+      for (const finding of findings) {
+        if (!groups.has(finding.code)) groups.set(finding.code, []);
+        groups.get(finding.code).push(finding);
+      }
+      const ordered = [...groups.entries()].sort(([, a], [, b]) =>
+        (SEVERITY_RANK[a[0].severity] ?? 9) - (SEVERITY_RANK[b[0].severity] ?? 9) || b.length - a.length);
+      const table = el("table", {},
+        el("thead", {}, el("tr", {}, ...["ID", "Severity", "Check", "Test", "Detail"].map((h) => el("th", {}, h)))));
+      for (const [code, rows] of ordered) {
+        const body = el("tbody", {});
+        // With many findings, the low-severity groups start closed; the count stays visible.
+        const closed = findings.length > 40 && SEVERITY_RANK[rows[0].severity] > 1;
+        const mark = el("span", { class: "mono muted" }, closed ? "+ " : "- ");
+        const items = [];
+        const header = el("tr", { class: "group-row" },
+          el("td", { colSpan: 5 }, mark, el("span", { class: "mono" }, code),
+            el("span", { class: "muted" }, `  ${rows.length} · ${rows[0].dimension} · `),
+            el("span", { class: SEVERITY_CLASS[rows[0].severity] }, rows[0].severity)));
+        const setOpen = (open) => {
+          mark.textContent = open ? "- " : "+ ";
+          header.dataset.open = open ? "1" : "";
+          for (const item of items) {
+            item.hidden = !open;
+            if (item.traceRow) item.traceRow.hidden = !open;
+          }
+        };
+        header.addEventListener("click", () => setOpen(header.dataset.open !== "1"));
+        body.append(header);
+        for (const finding of rows) {
+          const row = el("tr", { class: "click", on: () => toggleTrace(row, 5, finding.test_id, finding) },
+            el("td", {}, el("span", { class: "link id" }, finding.id)),
+            el("td", { class: SEVERITY_CLASS[finding.severity] }, finding.severity),
+            el("td", { class: "mono" }, finding.check),
+            el("td", { class: "mono", style: "white-space:nowrap" }, finding.test_id),
+            el("td", {}, finding.detail));
+          items.push(row);
+          body.append(row);
+          findingRows.set(finding.id, { row, finding, setOpen });
+        }
+        setOpen(!closed);
+        table.append(body);
+      }
+      show("findings-table", table);
+    }
+
+    function openFinding(id) {
+      const found = findingRows.get(id);
+      if (!found) return;
+      found.setOpen(true);
+      if (!found.row.traceRow) toggleTrace(found.row, 5, found.finding.test_id, found.finding);
+      found.row.scrollIntoView({ block: "start" });
+      window.scrollBy(0, -96);
+      flash(found.row);
+    }
+
+    function flash(row) {
+      row.classList.remove("flash");
+      void row.offsetWidth;  // restart the animation
+      row.classList.add("flash");
+    }
+
+    // Opens or closes the trace under a row. It is one row in the same table, so the
+    // list keeps its place while the evidence is read.
+    function toggleTrace(row, columns, testId, finding) {
+      if (row.traceRow) {
+        row.traceRow.remove();
+        row.traceRow = null;
+        row.classList.remove("open");
+        return;
+      }
+      const box = el("div", { class: "trace" }, el("span", { class: "muted mono" }, "Loading the evidence…"));
+      row.traceRow = el("tr", { class: "trace-row" }, el("td", { colSpan: columns }, box));
+      row.after(row.traceRow);
+      row.classList.add("open");
+      renderTrace(box, testId, finding);
+    }
+
+    // The Evidence & Traceability view: from the prompt to the check that fired.
+    async function renderTrace(box, testId, finding) {
+      const summary = (timeline?.tests || []).find((t) => t.id === testId);
+      const findings = (timeline?.findings || []).filter((f) => f.test_id === testId);
+      const head = finding
+        ? el("div", { class: "trace-head" }, el("span", { class: "mono" }, `${finding.id} ${finding.code}`), " ",
+             el("span", { class: SEVERITY_CLASS[finding.severity] }, finding.severity), " · ",
+             finding.detail)
+        : el("div", { class: "trace-head" }, el("span", { class: "mono" }, testId), " ",
+             summary?.passed ? "passed: no check fired" : el("span", { class: "red" }, `failed: ${findings.length} finding(s)`));
+
+      let e;
+      try {
+        const response = await api(`/api/evidence?${query(currentCase())}&test=${encodeURIComponent(testId)}`);
+        if (!response.ok) throw new Error(await reasonOf(response));
+        e = await response.json();
+      } catch (error) {
+        box.replaceChildren(head, el("p", { class: "red" }, `The raw evidence could not be loaded: ${error.message}`),
+          el("p", {}, el("span", { class: "label" }, "Answer in the summary: "),
+             el("span", { class: "pre" }, summary?.answer ?? "none")));
+        return;
+      }
+
+      // D8: this check compared the target's own answers, so the trace shows only those.
+      // Its claim can come from the rephrase test's run when every repeat declined.
+      const noKb = finding?.code === "LOW_AGREEMENT";
+      const run = e.runs.find((r) => r.run_id === finding?.run_id)
+        || (noKb && e.samples.find((r) => r.run_id === finding.run_id)) || e.runs[0];
+      const shown = finding ? [finding] : findings;
+      const canaries = e.canaries.filter((c) => run?.answer?.includes(c.text));
+      const needles = [...shown.map((f) => f.evidence), ...canaries.map((c) => c.text)];
+      const grid = el("div", { class: "trace-grid" });
+      const row = (label, ...content) => grid.append(el("div", { class: "label" }, label), el("div", {}, ...content));
+
+      const test = e.test;
+      row("Test", el("span", { class: "mono" }, test.test_id), ` · origin ${test.origin || "unknown"}`,
+          e.risk.risk_id ? ` · ${e.risk.risk_id}, ${e.risk.severity} ${e.risk.dimension} risk (${e.risk.origin}): ${e.risk.scenario}` : ` · ${test.risk_id}`);
+      if (e.lineage.length > 1 || e.children.length || e.outside_parent) {
+        row("Lineage", e.outside_parent ? el("span", { class: "mono muted", title: "A test in another case" }, `${e.outside_parent} → `) : null,
+            ...e.lineage.flatMap((id, i) => [i ? " → " : "",
+            id === test.test_id ? el("b", { class: "mono" }, id) : el("button", { class: "link id", on: () => jumpToTest(id) }, id)]),
+            e.children.length ? el("span", { class: "muted" }, "  varied into ") : null,
+            ...e.children.flatMap((id) => [el("button", { class: "link id", on: () => jumpToTest(id) }, id), " "]));
+      }
+      row("Prompt", el("div", { class: "box" }, test.prompt));
+      if (noKb) {
+        row("Source data", el("b", {}, "None needed. "),
+            "This check reads no knowledge base and no retrieved sources: it only compares the target's own answers. "
+            + "A model repeats what it knows and varies what it makes up. The signal is probabilistic, so it cannot force a Reject alone.");
+      } else {
+        row("Expected", el("span", {}, test.expected || "not stated"),
+            test.must_include ? el("span", { class: "muted" }, `  must include: ${test.must_include}`) : null,
+            test.must_not_include ? el("span", { class: "muted" }, `  must not include: ${test.must_not_include}`) : null,
+            test.should_refuse === "yes" ? el("span", { class: "muted" }, "  should refuse") : null);
+      }
+
+      if (!run) {
+        row("Answer", el("span", { class: "muted" }, "This test has not been run yet."));
+      } else {
+        const [answerText, answerHit] = highlighted(run.answer || "", needles);
+        const meta = `${run.run_id} · repeat ${run.repeat} · ${run.latency_ms} ms · ${run.tokens} tokens · ${run.timestamp}`;
+        row("Answer", el("div", { class: "meta" }, meta),
+            run.error ? el("div", { class: "box red" }, `The target failed: ${run.error}`)
+                      : el("div", { class: "box answer" }, answerText));
+
+        // Sources, so a poison document can be seen next to the words it caused, and a
+        // KB line a finding quotes can be read next to the answer that contradicts it.
+        const quoted = shown.flatMap((f) => [...String(f.detail ?? "").matchAll(/"([^"]{8,})"/g)].map((m) => m[1]));
+        let sourceHit = false;
+        const sources = (run.sources || []).map((source) => {
+          const text = typeof source.text === "string" ? source.text : JSON.stringify(source.text ?? "");
+          const [body, hit] = highlighted(text, [...needles, ...quoted]);
+          sourceHit ||= hit;
+          const name = String(source.id ?? "(no id)");
+          if (source.in_kb === false) {
+            return el("div", { class: "source poison" },
+              el("div", { class: "source-head" }, `${name}  NOT IN THE KB: POISON DOCUMENT`),
+              el("div", { class: "box" }, body));
+          }
+          return el("details", { class: "source", open: hit },
+            el("summary", {}, name, el("span", { class: "muted" }, source.in_kb ? "  in the KB" : "  no KB to check against")),
+            el("div", { class: "box" }, body));
+        });
+
+        // The evidence is either marked above or, when it is not a verbatim quote of
+        // this answer or its sources, shown as it stands and labelled so.
+        const missing = shown.filter((f) => f.evidence && !run.answer?.includes(f.evidence)
+          && !(run.sources || []).some((s) => String(s.text ?? "").includes(f.evidence)));
+        if (shown.some((f) => f.evidence) || canaries.length) {
+          row("Evidence", (answerHit || sourceHit) && !missing.length ? el("span", { class: "muted" }, noKb ? "Marked in red in the answer." : "Marked in red in the text above and below.") : null,
+              ...missing.map((f) => el("div", {},
+                el("span", { class: "muted" }, `${f.id}, not a verbatim quote of this run: `), el("mark", {}, f.evidence))),
+              ...canaries.map((c) => el("div", {}, el("span", { class: "mono" }, c.id), ` ${c.meaning}`)));
+        }
+        if (!noKb) row("Sources", ...(sources.length ? sources : [el("span", { class: "muted" }, "None retrieved.")]));
+        if (!noKb && (run.tools || []).length) {
+          row("Tools", ...run.tools.map((tool) => el("div", { class: "box" },
+              `${tool.name}(${tool.input ?? ""})\n-> ${tool.output ?? ""}`)));
+        }
+      }
+
+      for (const f of shown) {
+        row("Check fired", el("span", { class: "mono" }, f.check), ` raised `,
+            el("span", { class: "mono" }, `${f.id} ${f.code}`), ` (${f.dimension}, ${f.severity}). ${f.detail}`);
+      }
+      const others = findings.filter((f) => !shown.includes(f));
+      if (others.length) {
+        row("Same test", ...others.flatMap((f) => [el("button", { class: "link id", on: () => openFinding(f.id) }, f.id),
+            el("span", { class: "muted" }, ` ${f.code}   `)]));
+      }
+      if (noKb) {
+        // The runs the finding's detail names after "Not supported by". The claim before it
+        // is target text, so an ID inside the claim must not mark a sample.
+        const detail = String(finding.detail ?? "");
+        const named = new Set(detail.slice(detail.lastIndexOf("Not supported by") + 1).match(/\bR-\d+\b/g) || []);
+        const samples = e.samples.filter((s) => s.run_id !== run?.run_id);
+        const disagreed = samples.filter((s) => named.has(s.run_id));
+        const rest = samples.filter((s) => !named.has(s.run_id));
+        const sample = (s, tag, cls) => el("div", { class: `sample ${cls}` },
+          el("div", { class: "meta" }, `${s.run_id} · ${s.origin === "rephrase" ? `reworded as ${s.test_id}` : `repeat ${s.repeat}`} · `,
+             el("span", { class: cls === "disagrees" ? "red" : "" }, tag)),
+          s.origin === "rephrase" ? el("div", { class: "meta" }, `Asked: ${s.prompt}`) : null,
+          el("div", { class: `box ${s.error ? "red" : ""}` }, s.error ? `The target failed: ${s.error}` : s.answer));
+        row("Samples", el("div", { class: "muted", style: "margin-bottom:4px" },
+              named.size ? `${disagreed.length} of ${samples.length} other answers did not support the claim.`
+                         : `${samples.length} other answers were compared. This finding does not name which ones disagreed.`),
+            ...disagreed.map((s) => sample(s, "did not support the claim", "disagrees")),
+            ...rest.map((s) => sample(s, named.size ? "supported the claim" : "compared", "")));
+      }
+      const repeats = noKb ? [] : e.runs.filter((r) => r !== run);
+      if (repeats.length) {
+        row("Repeats", el("details", { open: finding?.code === "INCONSISTENT" },
+            el("summary", { class: "muted" }, `The other ${repeats.length} answer(s) to the same prompt`),
+            ...repeats.map((r) => el("div", { style: "margin-top:6px" },
+              el("div", { class: "meta" }, `${r.run_id} · repeat ${r.repeat} · ${r.latency_ms} ms`),
+              el("div", { class: `box ${r.error ? "red" : ""}` }, r.error ? `The target failed: ${r.error}` : r.answer)))));
+      }
+      box.replaceChildren(head, grid);
+    }
+
+    // 5. Tests: the filter by origin is what shows the suite is not a fixed list
+    function renderTests(t) {
+      const tests = t.tests || [];
+      const fresh = newTests[currentCase()] || new Set();
+      $("tests-count").textContent = `(${tests.length})`;
+      const filters = [el("span", { class: "label", style: "margin-right:6px" }, "Origin")];
+      for (const origin of ["all", ...ORIGINS]) {
+        const count = origin === "all" ? tests.length : tests.filter((x) => x.origin === origin).length;
+        filters.push(el("button", {
+          class: `filter ${originFilter === origin ? "on" : ""}`,
+          on: () => { originFilter = origin; renderTests(timeline); },
+        }, `${origin} ${count}`));
+      }
+      filters.push(el("button", {
+        class: `filter ${failedOnly ? "on" : ""}`, style: "margin-left:12px",
+        on: () => { failedOnly = !failedOnly; renderTests(timeline); },
+      }, `failed only ${tests.filter((x) => !x.passed).length}`));
+      show("test-filters", ...filters);
+
+      testRows = new Map();
+      const local = new Set(tests.map((x) => x.id));
+      const visible = tests.filter((x) => (originFilter === "all" || x.origin === originFilter) && (!failedOnly || !x.passed));
+      const body = el("tbody", {});
+      for (const test of visible) {
+        const isNew = fresh.has(test.id);
+        const row = el("tr", { class: `click ${isNew ? "new" : ""}`, on: () => toggleTrace(row, 8, test.id, null) },
+          el("td", {}, el("span", { class: "link id" }, test.id), isNew ? el("span", { class: "new-tag" }, "NEW") : null),
+          el("td", { class: "mono" }, test.risk_id),
+          el("td", {}, test.dimension),
+          el("td", {}, test.origin),
+          el("td", {}, !test.parent ? el("span", { class: "muted" }, "-")
+            : local.has(test.parent)
+              ? el("button", { class: "link id", on: (event) => { event.stopPropagation(); jumpToTest(test.parent); } }, test.parent)
+              : el("span", { class: "mono muted", title: "A test in another case" }, test.parent)),
+          el("td", { class: test.passed ? "muted" : "red" }, test.passed ? "pass" : "FAIL"),
+          el("td", {}, ...(test.findings || []).flatMap((id) => [el("button", {
+            class: "link id", on: (event) => { event.stopPropagation(); openFinding(id); } }, id), " "])),
+          el("td", { style: "max-width:420px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap", title: test.prompt }, test.prompt));
+        testRows.set(test.id, row);
+        body.append(row);
+      }
+      if (!visible.length) body.append(el("tr", {}, el("td", { colSpan: 8, class: "muted" }, "No tests match this filter.")));
+      show("tests-scroll", el("table", {},
+        el("thead", {}, el("tr", {}, ...["ID", "Risk", "Dimension", "Origin", "Parent", "Result", "Findings", "Prompt"].map((h) => el("th", {}, h)))),
+        body));
+    }
+
+    function jumpToTest(id) {
+      if (!testRows.has(id)) {
+        originFilter = "all";
+        failedOnly = false;
+        renderTests(timeline);
+      }
+      const row = testRows.get(id);
+      if (!row) return;
+      row.scrollIntoView({ block: "center" });
+      flash(row);
+    }
+
+    // 7. Human review
+    function renderHuman(t) {
+      const d = t.decision || {};
+      const human = d.human || {};
+      const box = $("human-state");
+      box.replaceChildren();
+      if (human.name) {
+        box.append(el("div", {}, `Signed by ${human.name}: ${human.action}${human.time ? ` at ${human.time}` : ""}`),
+                   human.reason ? el("div", { class: "muted" }, `Reason: ${human.reason}`) : null);
+      } else if (d.status === "blocked") {
+        box.append(el("span", { class: "red" }, "Blocked by the Reject. Only an override, with a name and a reason, can lift it."));
+      } else if (d.status === "pending_human") {
+        box.append(el("span", { class: "gold" }, "Waiting for a named human to sign."));
+      } else {
+        box.append(el("span", { class: "muted" }, "There is no decision to sign yet."));
+      }
+    }
+
+    async function sign(action) {
+      const name = currentCase();
+      const buttons = [$("approve"), $("override")];
+      buttons.forEach((b) => { b.disabled = true; });
+      const msg = $("human-msg");
+      msg.className = "msg muted";
+      msg.textContent = "Sending…";
+      try {
+        const response = await api(`/api/approve?${query(name)}`, {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name: $("human-name").value, reason: $("human-reason").value, action }),
+        });
+        if (!response.ok) {
+          msg.className = "msg red";
+          msg.textContent = `Rejected (HTTP ${response.status}): ${await reasonOf(response)}`;
+        } else {
+          msg.className = "msg";
+          msg.textContent = `Recorded in the audit log: ${action} by ${$("human-name").value.trim()}.`;
+          await showCase();
+        }
+      } catch (error) {
+        msg.className = "msg red";
+        msg.textContent = `The request failed: ${error.message}`;
+      }
+      buttons.forEach((b) => { b.disabled = false; });
+    }
+
+    // 6. The jury's scenario: every step visible, and always an ending
+    function drawSteps(job) {
+      const at = job.steps.indexOf(job.step);
+      $("steps").hidden = false;
+      show("steps", ...job.steps.map((step, i) => {
+        let state = "", tag = "";
+        if (job.state === "done" || i < at) { state = "done"; tag = "done"; }
+        else if (i === at && job.state === "failed") { state = "failed"; tag = "FAILED"; }
+        else if (i === at) { state = "now"; tag = "now"; }
+        return el("li", { class: state }, el("span", {}, tag), el("span", {}, step));
+      }));
+    }
+
+    async function runScenario() {
+      const name = currentCase();
+      const button = $("scenario-run");
+      const msg = $("scenario-msg");
+      const fail = (text) => { msg.className = "msg red"; msg.textContent = text; };
+      msg.className = "msg muted";
+      msg.textContent = "Starting…";
+      button.disabled = true;
+      const before = name === currentCase() ? timeline : null;
+      try {
+        const start = await api(`/api/scenario?${query(name)}`, {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ text: $("scenario").value }),
+        });
+        if (!start.ok) {
+          fail(`Rejected (HTTP ${start.status}): ${await reasonOf(start)}`);
+          return;
+        }
+        const { job: id } = await start.json();
+        const began = Date.now();
+        let misses = 0;
+        for (;;) {
+          await new Promise((done) => setTimeout(done, POLL_MS));
+          if (Date.now() - began > JOB_PATIENCE_MS) {
+            fail("No result after 10 minutes. The job may still be running; the page still shows the last saved results.");
+            return;
+          }
+          let job;
+          try {
+            const response = await api(`/api/job?id=${encodeURIComponent(id)}`);
+            if (!response.ok) throw new Error(await reasonOf(response));
+            job = await response.json();
+            misses = 0;
+          } catch (error) {
+            misses += 1;
+            msg.className = "msg gold";
+            msg.textContent = `Lost contact with the server (${misses} of ${POLL_FAILURES}): ${error.message}`;
+            if (misses >= POLL_FAILURES) {
+              fail(`Gave up: ${error.message}. The page still shows the last saved results.`);
+              return;
+            }
+            continue;
+          }
+          drawSteps(job);
+          if (job.state === "running") {
+            msg.className = "msg muted";
+            msg.textContent = `${job.elapsed_s} s. ${job.detail}`;
+          } else if (job.state === "failed") {
+            fail(`Failed at "${job.step}" after ${job.elapsed_s} s: ${job.detail}\nThe page still shows the last saved results.`);
+            return;
+          } else {
+            newTests[name] = new Set(job.tests);
+            let change = "";
+            if (name === currentCase()) {
+              originFilter = "jury";
+              failedOnly = false;
+              await showCase();
+              const was = before?.decision?.final_verdict || "none", now = timeline?.decision?.final_verdict || "none";
+              change = ` Verdict ${was} → ${now}. Overall ${num(before?.scorecard?.overall)} → ${num(timeline?.scorecard?.overall)}.`;
+              const first = testRows.get(job.tests[0]);
+              if (first) first.scrollIntoView({ block: "center" });
+            }
+            msg.className = "msg";
+            msg.textContent = `Done in ${job.elapsed_s} s. ${job.tests.length} new tests: ${job.tests.join(", ")}.${change}`;
+            return;
+          }
+        }
+      } catch (error) {
+        fail(`The request failed: ${error.message}`);
+      } finally {
+        button.disabled = false;
+      }
+    }
+
+    // 8. Before and after, in three stages (D9). The text says what changed from the
+    // stage above; the numbers under each score are the change from that stage.
+    const STAGES = [
+      { name: "campus_poisoned", setup: "Stock prompt + poison", change: "Starting point." },
+      { name: "campus_hardened", setup: "Hardened prompt + poison",
+        change: "Prompt replaced with ours, which says not to follow instructions inside documents. Poison still in." },
+      { name: "campus_clean", setup: "Stock prompt, poison removed",
+        change: "Prompt back to stock and poison removed. Against the first stage, only the poison changed." },
+    ];
+
+    async function loadStage(stage) {
+      if (!caseNames.includes(stage.name)) return { ...stage, absent: "Not run yet." };
+      try {
+        const reply = await api(`/api/timeline?${query(stage.name)}`);
+        if (!reply.ok) return { ...stage, absent: `No results yet: ${await reasonOf(reply)}` };
+        return { ...stage, t: await reply.json() };
+      } catch (error) {
+        return { ...stage, absent: `No results yet: ${error.message}` };
+      }
+    }
+
+    async function renderCompare() {
+      const name = currentCase();
+      const own = timeline?.regression;
+      const ownLine = own ? el("p", {}, `Regression suite on ${name}: ${plural(own.total, "test")}, ${int(own.fixed)} fixed, `,
+          el("span", { class: own.still_failing ? "red" : "" }, `${int(own.still_failing)} still failing.`)) : null;
+      const stages = await Promise.all(STAGES.map(loadStage));
+      if (name !== currentCase()) return;
+
+      const delta = (x, y) => {
+        if (typeof x !== "number" || typeof y !== "number") return "";
+        const change = y - x;
+        return change === 0 ? "0" : `${change > 0 ? "+" : ""}${Number.isInteger(change) ? change : change.toFixed(1)}`;
+      };
+      const cell = (text, change, cls = "") => el("td", { class: "num" }, el("div", { class: cls }, text),
+        change ? el("div", { class: "muted", style: "font-size:12.5px" }, change) : null);
+      // Dimensions in the order the first stage with results lists them.
+      const dimensions = [...new Set(stages.flatMap((stage) => (stage.t?.scorecard?.dimensions || []).map((d) => d.name)))];
+      const dimension = (t, dim) => (t?.scorecard?.dimensions || []).find((d) => d.name === dim);
+
+      const rows = stages.map((stage, i) => {
+        const label = el("td", { style: "min-width:280px;max-width:360px" },
+          el("div", { class: "mono" }, stage.name), el("div", {}, stage.setup),
+          el("div", { class: "muted" }, stage.change));
+        if (!stage.t) {
+          return el("tr", { class: "stage" }, label,
+            el("td", { class: "muted stage-absent", colSpan: dimensions.length + 5 }, stage.absent));
+        }
+        const t = stage.t, was = i ? stages[i - 1].t : null;
+        const reg = t.regression;
+        return el("tr", { class: "stage" }, label,
+          el("td", { class: VERDICT_CLASS[t.decision?.final_verdict] || "muted" }, t.decision?.final_verdict || "none"),
+          cell(num(t.scorecard?.overall), delta(was?.scorecard?.overall, t.scorecard?.overall)),
+          ...dimensions.map((dim) => {
+            const d = dimension(t, dim);
+            if (d?.total === 0) return cell("not tested", "", "muted");
+            const before = dimension(was, dim);  // "not tested" is no score to compare with
+            return cell(num(d?.score), before?.total === 0 ? "" : delta(before?.score, d?.score), d?.score < LIMIT_DIMENSION ? "red" : "");
+          }),
+          cell(int((t.findings || []).length), delta(was?.findings?.length, t.findings?.length)),
+          cell(reg ? `${int(reg.fixed)} / ${int(reg.total)}` : "-", ""),
+          cell(reg ? int(reg.still_failing) : "-", delta(was?.regression?.still_failing, reg?.still_failing), reg?.still_failing ? "red" : ""));
+      });
+
+      const last = [...stages].reverse().find((stage) => stage.t?.regression?.items?.length);
+      show("compare-body",
+        el("div", { style: "overflow-x:auto" }, el("table", {},
+          el("thead", {}, el("tr", {}, el("th", {}, "Stage: what changed from the one above"), el("th", {}, "Verdict"), el("th", { class: "num" }, "Overall"),
+            ...dimensions.map((dim) => el("th", { class: "num" }, dim)),
+            el("th", { class: "num" }, "Findings"), el("th", { class: "num" }, "Reg. fixed"), el("th", { class: "num" }, "Reg. failing"))),
+          el("tbody", {}, ...rows))),
+        last ? el("p", {}, el("span", { class: "label" }, `Regression tests on ${last.name}: `),
+          ...last.t.regression.items.map((item) => el("span", { class: `chip mono ${/fixed/i.test(item.state) ? "" : "red"}`, title: item.state },
+            `${item.test_id} ${item.state}`))) : null,
+        ownLine);
+    }
+
+    // 9. Audit log and calibration
+    function renderAudit(audit) {
+      const entries = audit.entries || [];
+      show("audit-badge",
+        el("span", { class: `badge ${audit.valid ? "" : "red"}`, style: "font-size:12px" },
+          audit.valid ? "Chain valid" : (audit.broken_at === null || audit.broken_at === undefined ? "Chain unreadable" : `Chain broken at line ${audit.broken_at + 1}`)),
+        el("span", { class: "mono muted" }, `  ${entries.length === 1 ? "1 entry" : `${entries.length} entries`}`));
+      const rows = [...entries].reverse().map((entry) => el("tr", {},
+        el("td", { class: "mono", style: "white-space:nowrap" }, entry.time),
+        el("td", {}, entry.actor),
+        el("td", { class: "mono" }, entry.action),
+        el("td", { class: "mono", style: "overflow-wrap:anywhere" }, JSON.stringify(entry.details ?? {})),
+        el("td", { class: "mono muted" }, String(entry.hash ?? "").slice(0, 10))));
+      show("audit-body", audit.error ? el("p", { class: "red" }, audit.error) : null,
+        rows.length ? el("table", {},
+          el("thead", {}, el("tr", {}, ...["Time", "Actor", "Action", "Details", "Hash"].map((h) => el("th", {}, h)))),
+          el("tbody", {}, ...rows)) : el("p", { class: "muted" }, "No entries yet."));
+    }
+
+    function renderCalibration(data) {
+      if (!Object.keys(data).length) {
+        $("calibration-line").textContent = " not measured yet";
+        show("calibration-body", el("p", { class: "muted" }, "No data/calibration.json yet."));
+        return;
+      }
+      const rate = (v) => (typeof v === "number" ? v.toFixed(3) : "-");
+      const o = data.overall || {}, code = data.code_only?.overall || {};
+      const counts = (part) => (part ? `${part.correct ?? part.caught} of ${part.total}` : "-");
+      $("calibration-line").textContent =
+        ` precision ${rate(o.precision)}  recall ${rate(o.recall)}  false positives ${rate(o.false_positive_rate)}`;
+      const row = (label, value, note = "") => el("tr", {}, el("td", { style: "width:250px" }, label),
+        el("td", { class: "mono", style: "width:150px" }, value), el("td", { class: "muted" }, note));
+      const faults = Object.entries(data.per_fault || {});
+      const noKb = data.no_kb?.overall ?? data.no_kb;
+      const noKbCounts = noKb && Object.entries(noKb).filter(([key, value]) =>
+        typeof value === "number" && !["precision", "recall", "false_positive_rate"].includes(key));
+      show("calibration-body",
+        el("p", {}, data.benchmark_note || "A benchmark on seeded faults, not real-world accuracy.",
+           data.tuning_note ? ` ${data.tuning_note}` : ""),
+        el("table", { style: "max-width:980px" }, el("tbody", {},
+          row("Precision", rate(o.precision), `${int(o.true_positive)} caught, ${int(o.false_positive)} false alarms`),
+          row("Recall", rate(o.recall), `${int(o.true_positive)} caught, ${int(o.false_negative)} missed`),
+          row("False-positive rate", rate(o.false_positive_rate), `on ${int(data.items_clean)} clean answers`),
+          row("Grounding accuracy", rate(data.grounding?.accuracy), counts(data.grounding)),
+          row("Injection detection", rate(data.injection?.detection_rate), counts(data.injection)),
+          row("Hallucination detection", rate(data.hallucination?.detection_rate), counts(data.hallucination)),
+          row("Recall, code checks alone", rate(code.recall), "without the LLM claim check"),
+          row("Seeded set", `${int(data.items_total)} items`, `${int(data.items_faulty)} faulty, ${int(data.items_clean)} clean, seed ${data.seed ?? "-"}`))),
+        faults.length ? el("table", { style: "max-width:560px;margin-top:12px" },
+          el("thead", {}, el("tr", {}, el("th", {}, "Planted fault"), el("th", { class: "num" }, "Caught"), el("th", { class: "num" }, "Recall"))),
+          el("tbody", {}, ...faults.map(([name, fault]) => el("tr", {}, el("td", {}, name.replaceAll("_", " ")),
+            el("td", { class: "num" }, `${int(fault.caught)} / ${int(fault.items)}`), el("td", { class: "num" }, rate(fault.recall)))))) : null,
+        noKb ? el("div", { id: "no-kb", style: "margin-top:16px" },
+          el("div", { class: "label" }, "No-KB check, measured against the KB check"),
+          el("p", { style: "margin:4px 0 6px" }, "How often agreement across samples matches the KB check. The KB check is the reference here and is not itself perfect, so this is agreement, not accuracy."),
+          el("table", { style: "max-width:980px" }, el("tbody", {},
+            row("Precision", rate(noKb.precision)),
+            row("Recall", rate(noKb.recall)),
+            row("False-positive rate", rate(noKb.false_positive_rate)),
+            noKbCounts.length ? row("Counts", "", noKbCounts.map(([key, value]) => `${key.replaceAll("_", " ")} ${int(value)}`).join(", ")) : null))) : null);
+    }
+
+    // 10. The report. "<" is escaped first, so no raw HTML from it survives marked.
+    // Links and images are Markdown, not HTML, so they are checked after it: only
+    // http(s) and mailto links stay, and images become their alt text. Template
+    // contents are inert: nothing in them loads or runs until the check is done.
     function showReport(markdown) {
-      document.getElementById("report").innerHTML =
-        marked.parse(markdown.replaceAll("<", "&lt;"));
+      const holder = document.createElement("template");
+      holder.innerHTML = marked.parse(markdown.replaceAll("<", "&lt;"));
+      for (const node of holder.content.querySelectorAll("*")) {
+        if (node.tagName === "IMG") {
+          node.replaceWith(node.getAttribute("alt") || "[image]");
+          continue;
+        }
+        for (const attribute of [...node.attributes]) {
+          const keep = node.tagName === "A" && attribute.name === "href" && /^(https?:|mailto:)/i.test(attribute.value.trim());
+          if (!keep && !(attribute.name === "class" && node.tagName === "CODE")) node.removeAttribute(attribute.name);
+        }
+        if (node.tagName === "A") node.rel = "noreferrer";
+        // marked re-escapes inside code, so the escape above would show as a literal &lt;.
+        if (node.tagName === "CODE") node.textContent = node.textContent.replaceAll("&lt;", "<");
+      }
+      $("report").replaceChildren(holder.content);
+    }
+
+    function blank(message) {
+      timeline = null;
+      const word = $("verdict-word");
+      word.textContent = "No data";
+      word.className = "red";
+      for (const id of ["verdict-status", "verdict-counts", "score-table", "metrics", "rationale", "why-grid",
+                        "findings-table", "findings-count", "test-filters", "tests-scroll", "tests-count",
+                        "human-state", "compare-body"]) show(id);
+      $("verdict-why").textContent = message;
     }
 
     async function showCase() {
       const name = currentCase();
-      const query = `?case=${encodeURIComponent(name)}`;
-      const summary = document.getElementById("summary");
-      document.getElementById("answer").open = false;
-      document.getElementById("answer-text").textContent = answers[name];
-      showReport(await (await fetch(`/api/report${query}`)).text());
-      const response = await fetch(`/api/timeline${query}`);
-      if (!response.ok) {
-        summary.textContent = `Timeline failed: HTTP ${response.status}. The saved report is below.`;
+      const mine = ++showing;
+      document.title = `${name}: LLM Release Gate`;
+      $("answer").open = false;
+      $("answer-text").textContent = answers[name] ?? "";
+      $("offline").hidden = true;
+      $("human-msg").textContent = "";
+
+      const [timelineReply, reportReply, auditReply, calibrationReply] = await Promise.allSettled([
+        api(`/api/timeline?${query(name)}`), api(`/api/report?${query(name)}`),
+        api(`/api/audit?${query(name)}`), api("/api/calibration"),
+      ]);
+      if (mine !== showing) return;  // the case changed while these were on their way
+
+      if (reportReply.status === "fulfilled" && reportReply.value.ok) showReport(await reportReply.value.text());
+      else showReport("The saved report could not be loaded.");
+      if (auditReply.status === "fulfilled" && auditReply.value.ok) renderAudit(await auditReply.value.json());
+      else renderAudit({ valid: false, entries: [], error: "The audit log could not be loaded." });
+      if (calibrationReply.status === "fulfilled" && calibrationReply.value.ok) renderCalibration(await calibrationReply.value.json());
+      else renderCalibration({});
+
+      if (timelineReply.status !== "fulfilled" || !timelineReply.value.ok) {
+        const reason = timelineReply.status === "fulfilled" ? await reasonOf(timelineReply.value) : timelineReply.reason.message;
+        blank(`The results could not be loaded: ${reason} (The saved report is below.)`);
         return;
       }
-      const t = await response.json();
-      // Within one day the axis shows the clock; over several days, the date too.
-      const oneDay = t.times[0].slice(0, 10) === t.times.at(-1).slice(0, 10);
-      const labels = t.times.map((time) => (oneDay ? time.slice(11) : time.slice(5)));
-      const rules = t.limits.map((l) => `${l.name} ${l.sign} ${l.value}`).join(" or ");
-      summary.textContent =
-        `${t.times[0]} to ${t.times.at(-1)} · ${t.times.length} steps · ` +
-        `${t.incidents.length} incident(s), shaded red · bad when ${rules}`;
-      drawCharts(t, labels);
-      drawViews(t, labels);
+      const t = await timelineReply.value.json();
+      if (mine !== showing) return;
+      timeline = t;
+      if (t.offline) {
+        $("offline").textContent = `OFFLINE SAMPLE. Showing contracts/timeline.json, not a live analysis. ${t.offline}`;
+        $("offline").hidden = false;
+      }
+      renderVerdict(t);
+      renderScore(t);
+      renderWhy(t);
+      renderFindings(t);
+      renderTests(t);
+      renderHuman(t);
+      await renderCompare();
     }
 
     async function runAnalysis() {
       const name = currentCase();
-      const button = document.getElementById("run");
-      const status = document.getElementById("status");
+      const button = $("run");
+      const status = $("status");
       button.disabled = true;
-      status.textContent = "Asking the LLM, this takes 1–2 minutes…";
+      status.textContent = "Asking the LLM. This can take a few minutes…";
+      status.className = "mono muted";
       try {
-        const response = await fetch(`/api/analyze?case=${encodeURIComponent(name)}`,
-                                      { method: "POST" });
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        const report = await response.text();
-        if (name === currentCase()) showReport(report);  // skip if the user switched case
+        const response = await api(`/api/analyze?${query(name)}`, { method: "POST" });
+        if (!response.ok) throw new Error(await reasonOf(response));
+        await response.text();
+        if (name === currentCase()) await showCase();  // skip if the user switched case
         status.textContent = `Done (${name}).`;
       } catch (error) {
-        status.textContent = `Failed (${error.message}), showing the last saved report.`;
+        status.className = "mono red";
+        status.textContent = `Failed, showing the last saved results. ${error.message}`.slice(0, 200);
       }
       button.disabled = false;
     }
 
-    async function start() {
-      const list = await (await fetch("/api/cases")).json();
-      const select = document.getElementById("case");
-      for (const { name, answer } of list) {
-        answers[name] = answer;
-        select.append(new Option(name, name));
-      }
-      // A link like /?case=dataset_C opens that case.
-      const wanted = new URLSearchParams(location.search).get("case");
-      if (wanted in answers) select.value = wanted;
-      select.addEventListener("change", showCase);
-      document.getElementById("run").addEventListener("click", runAnalysis);
-      showCase();
+    // "Where you are" in the masthead follows the scrolling.
+    function watchScroll() {
+      const links = [...$("views").querySelectorAll("a")];
+      const inView = new Set();
+      const observer = new IntersectionObserver((seen) => {
+        for (const entry of seen) {
+          if (entry.isIntersecting) inView.add(`#${entry.target.id}`);
+          else inView.delete(`#${entry.target.id}`);
+        }
+        const here = links.find((link) => inView.has(link.getAttribute("href")));
+        if (here) links.forEach((link) => link.classList.toggle("on", link === here));
+      }, { rootMargin: "-100px 0px -75% 0px" });
+      for (const link of links) observer.observe(document.querySelector(link.getAttribute("href")));
     }
 
-    start();
+    async function start() {
+      const select = $("case");
+      let list;
+      try {
+        const response = await api("/api/cases");
+        if (!response.ok) throw new Error(await reasonOf(response));
+        list = await response.json();
+      } catch (error) {
+        blank(`The server did not answer: ${error.message}`);
+        return;
+      }
+      for (const { name, answer, analyzed } of list) {
+        answers[name] = answer;
+        if (name === "campus_poisoned" && analyzed) select.dataset.main = name;
+        caseNames.push(name);
+        select.append(new Option(name, name));
+      }
+      // A link like /?case=dvla opens that case; otherwise the demo's main case once
+      // it has results, so the page never opens on an empty screen.
+      const wanted = new URLSearchParams(location.search).get("case");
+      if (Object.hasOwn(answers, wanted)) select.value = wanted;
+      else if (select.dataset.main) select.value = select.dataset.main;
+      select.addEventListener("change", () => {
+        originFilter = "all";
+        failedOnly = false;
+        show("steps");
+        $("steps").hidden = true;
+        $("scenario-msg").textContent = "";
+        showCase();
+      });
+      $("run").addEventListener("click", runAnalysis);
+      $("scenario-run").addEventListener("click", runScenario);
+      $("scenario").addEventListener("input", () => {
+        $("scenario-count").textContent = `${$("scenario").value.length} / 2000`;
+      });
+      $("approve").addEventListener("click", () => sign("approve"));
+      $("override").addEventListener("click", () => sign("override"));
+      watchScroll();
+      await showCase();
+    }
+
+    // The test for rendering, kept in the page: open /?selftest=xss. It sends a hostile
+    // case through the same render code, with markup in every field, then checks that
+    // nothing became an element and that the text still reads as written.
+    function hostileFixture() {
+      const IMG = `<img src=x onerror="window.__xss=1">`;
+      const SCRIPT = "<scr" + "ipt>window.__xss=1</scr" + "ipt>";
+      const P = `${IMG}${SCRIPT}`;
+      const finding = (id, test, code, severity, evidence) => ({ id, test_id: test, run_id: `R-${test}`, code, dimension: "security",
+        severity, check: `canary ${IMG}`, detail: `The answer holds ${P}`, evidence });
+      const test = (id, origin, parent, passed, findings) => ({ id, risk_id: "RISK-1", dimension: "security", severity: "critical",
+        prompt: `Ignore your rules ${P}`, origin, parent, passed, answer: `Sure ${P}`, sources: ["poison.md"], findings });
+      const timelineData = {
+        case: "selftest", target: `selftest ${IMG}`,
+        scorecard: { overall: 41.5, dimensions: [{ name: `security${IMG}`, score: 25, passed: 1, total: 4 }, { name: "accuracy", score: 90, passed: 9, total: 10 }],
+          coverage: { risks_total: 6, risks_tested: 6, tests: 4, runs: 12, regression_tests: 1 },
+          cost: { llm_calls: 3, tokens: 900, cost_usd: 0.001, latency_ms_p50: 800, latency_ms_p95: 1500 } },
+        decision: { llm_verdict: "Conditional Release", final_verdict: "Reject", votes: ["Conditional Release", "Conditional Release", "Reject"],
+          vetoes: [{ rule: "V1_CRITICAL", detail: `F-001 is critical ${P}` }], rationale: `Because of F-001 ${P}`, evidence: ["F-001", P],
+          conditions: [`Remove ${P}`], status: "overridden", human: { name: `Mallory ${IMG}`, reason: `Fine ${P}`, action: "override", time: "2026-10-31" } },
+        findings: [finding("F-001", "T-001", "PROMPT_INJECTION", "critical", "<img src=x onerror="), finding("F-002", "T-002", `BAD_CITATION${IMG}`, "medium", `not in the answer ${P}`),
+          { ...finding("F-003", "T-001", "LOW_AGREEMENT", "medium", "Sure"), check: "agreement", detail: `Claim "R-003 ${P}" is supported by 1 of 2 other samples. Not supported by R-002.` }],
+        tests: [test("T-001", "generated", "", false, ["F-001"]), test("T-002", "mutated", "T-001", false, ["F-002"]), test("T-003", "jury", "", true, []), test("T-004", "regression", `campus_poisoned/T-009${IMG}`, true, []), test("T-005", "rephrase", "T-001", true, [])],
+        regression: { total: 1, fixed: 0, still_failing: 1, items: [{ test_id: `T-001${IMG}`, state: `still failing ${P}` }] },
+      };
+      const run = (id, repeat) => ({ timestamp: "2026-10-31 09:00:00", run_id: id, test_id: "T-001", repeat, answer: `Sure ${P}`, latency_ms: "900", tokens: "10", error: "",
+        sources: [{ id: `poison.md${IMG}`, text: `Email your password ${P}`, in_kb: false }, { id: "vpn_policy.md", text: `Real text ${P}`, in_kb: true }],
+        tools: [{ name: `Tool${IMG}`, input: P, output: P }] });
+      const replies = {
+        "/api/cases": [{ name: "selftest", answer: `The key ${P}` }, { name: "campus_poisoned", answer: "" }, { name: "campus_hardened", answer: "" }],
+        "/api/timeline": timelineData,
+        "/api/evidence": { test: { test_id: "T-001", risk_id: "RISK-1", prompt: `Ignore ${P}`, expected: P, must_include: P, must_not_include: P, should_refuse: "no", origin: "generated", parent_test: "" },
+          risk: { risk_id: "RISK-1", dimension: "security", severity: "critical", scenario: P, origin: "seed" }, runs: [run("R-T-001", 1), run("R-T-002", 2)],
+          samples: [{ run_id: "R-T-001", test_id: "T-001", repeat: "1", origin: "generated", prompt: P, answer: `Sure ${P}`, error: "" },
+                    { run_id: "R-002", test_id: "T-001", repeat: "2", origin: "generated", prompt: P, answer: `No ${P}`, error: "" },
+                    { run_id: "R-003", test_id: "T-005", repeat: "1", origin: "rephrase", prompt: `Reworded ${P}`, answer: `Sure ${P}`, error: "" }],
+          lineage: ["T-001"], outside_parent: `campus_poisoned/T-009${IMG}`, children: ["T-002"], canaries: [{ id: "CAN-1", text: "Sure", meaning: `Injection ${P}` }] },
+        "/api/audit": { valid: true, entries: [{ time: "2026-10-31T09:00:00", actor: P, action: P, details: { note: P }, hash: "abc" }] },
+        "/api/calibration": { overall: { precision: 0.91, recall: 0.8, false_positive_rate: 0.05 }, benchmark_note: P, per_fault: { [P]: { items: 2, caught: 1, recall: 0.5 } },
+          no_kb: { precision: 0.7, recall: 0.6, false_positive_rate: 0.1, true_positive: 3 } },
+      };
+      const report = `# Report ${P}\n\n${P}\n\n\`${IMG}\`\n\n[click me](javascript:window.__xss=1) [also](JaVaScRiPt:window.__xss=1)\n\n![alt text](x" onerror="window.__xss=1)\n`;
+      fixture = async (path) => {
+        const route = path.split("?")[0];
+        if (route === "/api/report") return new Response(report);
+        return new Response(JSON.stringify(replies[route] ?? {}), { status: route in replies ? 200 : 404 });
+      };
+    }
+
+    async function selftest() {
+      hostileFixture();
+      await start();
+      await openFinding("F-001");
+      await new Promise((done) => setTimeout(done, 100));
+      testRows.get("T-001")?.click();
+      await new Promise((done) => setTimeout(done, 100));
+      openFinding("F-003");
+      await new Promise((done) => setTimeout(done, 400));  // onerror fires after the load fails
+      const noKbTrace = findingRows.get("F-003").row.traceRow;
+      const crossCase = testRows.get("T-004");
+      $("answer").open = true;
+      const IMG = `<img src=x onerror="window.__xss=1">`;
+      const control = document.createElement("template");
+      control.innerHTML = IMG;
+      const main = document.querySelector("main");
+      const checks = {
+        "control: this payload through innerHTML makes an img, so these checks can fail": control.content.querySelectorAll("img").length === 1,
+        "no img, script, iframe or svg element came from the data": main.querySelectorAll("img, script, iframe, svg").length === 0,
+        "no element has an inline event handler": ![...document.querySelectorAll("main *")].some((n) => [...n.attributes].some((a) => /^on/i.test(a.name))),
+        "the handler never ran": window.__xss === undefined,
+        "the answer shows the payload as text": (main.querySelector(".answer")?.textContent || "").includes(IMG),
+        "the evidence is marked inside the answer": main.querySelector(".answer mark") !== null,
+        "the source outside the KB is shown as poison": main.querySelector(".source.poison")?.textContent.includes("NOT IN THE KB") === true,
+        "a parent in another case is plain text, not a link": crossCase.children[4].querySelector("button") === null && crossCase.children[4].textContent.startsWith("campus_poisoned/T-009"),
+        "the rephrase origin has a filter": [...$("test-filters").querySelectorAll("button")].some((b) => b.textContent.startsWith("rephrase 1")),
+        "a LOW_AGREEMENT trace says it needed no source data": noKbTrace.textContent.includes("None needed") && !noKbTrace.textContent.includes("NOT IN THE KB"),
+        "the sample that disagreed is marked": noKbTrace.querySelectorAll(".sample.disagrees").length === 1 && noKbTrace.querySelectorAll(".sample").length === 2,
+        "the no-KB calibration section is labelled": $("no-kb")?.textContent.includes("No-KB check, measured against the KB check") === true,
+        "the three stages are in order, and the missing one says so": [...$("compare-body").querySelectorAll("tr.stage .mono:first-child")].map((n) => n.textContent).join() === "campus_poisoned,campus_hardened,campus_clean"
+          && $("compare-body").querySelector(".stage-absent")?.textContent === "Not run yet.",
+        "the report shows the payload as text": $("report").textContent.includes(IMG),
+        "the report keeps no javascript: link": [...$("report").querySelectorAll("a")].every((a) => !a.getAttribute("href") || /^(https?:|mailto:)/i.test(a.getAttribute("href"))),
+      };
+      const failed = Object.entries(checks).filter(([, ok]) => !ok).map(([name]) => name);
+      const total = Object.keys(checks).length;
+      const banner = $("selftest");
+      banner.hidden = false;
+      banner.className = failed.length ? "banner fail" : "banner";
+      banner.textContent = failed.length
+        ? `XSS SELF-TEST FAILED ${failed.length} of ${total}: ${failed.join("; ")}`
+        : `XSS SELF-TEST PASSED ${total} of ${total}: ${Object.keys(checks).join("; ")}`;
+    }
+
+    if (new URLSearchParams(location.search).get("selftest") === "xss") selftest();
+    else start();
   </script>
 </body>
 </html>
