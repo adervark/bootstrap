@@ -214,6 +214,12 @@ def build():
     labels = metrics.get("labels")
     no_kb = metrics.get("no_kb", {})
     latency = sorted(r["scorecard"]["cost"]["latency_ms_p50"] for r in results.values())
+    bias_tests = bias_found = 0
+    for case in CASES:
+        bias_risks = {row["risk_id"] for row in csv.DictReader(open(f"data/sessions/{case}/risks.csv", encoding="utf-8"))
+                      if row["scenario"].lower().startswith("bias")}
+        bias_tests += sum(t["risk_id"] in bias_risks for t in results[case]["tests"])
+        bias_found += codes[case].count("BIAS")
     jury = load("deck/jury_dryrun.json") if Path("deck/jury_dryrun.json").exists() else None
     d = Deck()
 
@@ -227,6 +233,9 @@ def build():
     d.text(0.6, 1.65, 11.5, 0.95, "A reusable framework: it writes tests from risks, attacks the app, checks every answer and recommends "
            "Release, Conditional Release or Reject, with the evidence. A named human signs off.",
            size=18, color=MUTED)
+    d.text(0.6, 2.38, 12.1, 0.4, [[("FOR  ", {"color": AMBER, "font": MONO, "bold": True, "size": 12}),
+                                   ("campus IT teams shipping LLM bots · release managers who sign off · security reviewers · "
+                                    "the students and staff who act on the answers", {})]], size=13, color=TEXT)
     cards = [("campus_poisoned", "CAMPUS HELPDESK · 1", "Stock prompt, 3 poisoned documents",
               f"{critical['campus_poisoned']} critical: sends users to a fake reset URL"),
              ("campus_hardened", "CAMPUS HELPDESK · 2", "Hardened prompt, same poison",
@@ -237,12 +246,12 @@ def build():
               f"0 critical; reveals its own rules {codes['dvla'].count('UNSAFE_CONTENT')} times")]
     for i, (case, label, what, why) in enumerate(cards):
         x = 0.6 + i * 3.1
-        d.rect(x, 2.85, 2.85, 2.55)
-        d.text(x + 0.15, 2.97, 2.6, 0.3, label, size=11, color=MUTED, font=MONO, bold=True)
-        d.text(x + 0.15, 3.25, 2.6, 0.65, what, size=14)
-        d.text(x + 0.15, 3.85, 1.5, 0.75, f"{score[case]:.1f}", size=36, font=MONO, bold=True)
-        d.text(x + 1.5, 4.08, 1.25, 0.4, verdict[case].upper(), size=16, color=RED, bold=True, align="r")
-        d.text(x + 0.15, 4.62, 2.6, 0.7, why, size=12, color=MUTED)
+        d.rect(x, 2.95, 2.85, 2.45)
+        d.text(x + 0.15, 3.05, 2.6, 0.3, label, size=11, color=MUTED, font=MONO, bold=True)
+        d.text(x + 0.15, 3.32, 2.6, 0.65, what, size=14)
+        d.text(x + 0.15, 3.9, 1.5, 0.75, f"{score[case]:.1f}", size=36, font=MONO, bold=True)
+        d.text(x + 1.5, 4.13, 1.25, 0.4, verdict[case].upper(), size=16, color=RED, bold=True, align="r")
+        d.text(x + 0.15, 4.65, 2.6, 0.7, why, size=12, color=MUTED)
     stats = [(f"{answers}", "answers judged, from 4 apps\nrun on localhost only"),
              (f"{held['Faults caught (recall)']['hits']}/{held['Faults caught (recall)']['total']}", "planted faults caught on a\nheld-out set never tuned on"),
              (f"{held['False alarms on clean answers']['hits']}/{held['False alarms on clean answers']['total']}", "false alarms on clean answers,\nsame held-out set"),
@@ -341,7 +350,8 @@ def build():
     d.slide(f"Every number has its count and a 95% interval in METRICS.md. Held out means a seed we never looked at while building. "
             f"Code alone catches {frac(code_only)}; the LLM judge brings it to {frac(rec)}. A repeat run gave "
             f"{run1['true_positive']}/96 and {run1['false_positive']}/96, so the spread is a couple of items. We also audited our "
-            f"own critical findings and fixed three bugs that caused 11 false alarms. Responsible AI is built in, not added.")
+            f"own critical findings and fixed three bugs that caused 11 false alarms. Responsible AI is built in, not added. "
+            f"Next: multi-turn attacks, more app adapters, and sampling real production logs.")
     kicker_and_title(d, "05 / TRUST AND RESPONSIBLE AI", "Measured, not claimed")
     callouts = [(frac(rec), f"planted faults caught, held-out seed ({ci(rec)})"),
                 (frac(fa), f"false alarms on clean answers; repeat run {run1['true_positive']}/96 caught, {run1['false_positive']}/96 false"),
@@ -360,16 +370,17 @@ def build():
         size=13, after=6)
     rows = [("Human control", "only a named person can release; an override needs a reason"),
             ("Traceability", "every finding cites its evidence; every step is hash-chained"),
+            ("Fairness", f"{bias_tests} paired prompts differing only in a group: {bias_found} treated differently"),
+            ("Failure handling", "API down: code checks still run, can never say Release; the page shows the saved report"),
             ("Privacy", "synthetic data only; leaked secrets are redacted in shared reports"),
             ("Containment", "apps under test run on localhost; the tester refuses other hosts"),
             ("Standards", "findings mapped to the OWASP Top 10 for LLM Apps 2025"),
             ("Cost, latency", f"${cost:.2f} for four apps; app answers in {latency[0] / 1000:.1f}-{latency[-1] / 1000:.1f} s (p50)")]
-    d.rect(7.0, 1.75, 5.73, 4.6)
+    d.rect(7.0, 1.75, 5.73, 5.2)
     for i, (name, text) in enumerate(rows):
-        y = 1.9 + i * 0.73
+        y = 1.86 + i * 0.63
         d.text(7.2, y, 1.7, 0.65, name, size=13, bold=True)
-        d.text(8.9, y, 3.75, 0.65, text, size=12, color=MUTED)
-    d.text(7.0, 6.5, 5.73, 0.5, "Next: multi-turn attacks, more app adapters, sampling real production logs.", size=12, color=MUTED)
+        d.text(8.9, y, 3.75, 0.62, text, size=12, color=MUTED)
     return d
 
 
